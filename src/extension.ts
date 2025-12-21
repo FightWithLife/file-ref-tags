@@ -96,6 +96,16 @@ class ReferenceDataManager {
 		this.saveReferences();
 	}
 
+	// 更新引用项标题
+	updateReferenceTitle(id: string, title: string): void {
+		const reference = this.references.find(r => r.id === id);
+		if (reference) {
+			reference.title = title;
+			reference.updatedAt = new Date().toISOString();
+			this.saveReferences();
+		}
+	}
+
 	// 获取存储路径
 	getStoragePath(): string {
 		return this.storagePath;
@@ -148,6 +158,10 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 						return;
 					case 'showStorageLocation':
 						this._showStorageLocation();
+						return;
+					case 'updateReferenceTitle':
+						this._dataManager.updateReferenceTitle(message.id, message.title);
+						this._sendReferences();
 						return;
 				}
 			},
@@ -371,7 +385,33 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
             overflow: hidden;
             text-overflow: ellipsis;
             flex: 1;
-            margin-right: 20px;
+            margin-right: 50px;
+        }
+        .reference-actions {
+            position: absolute;
+            right: 6px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+        .reference-item:hover .reference-actions {
+            opacity: 1;
+        }
+        .edit-btn {
+            background: none;
+            border: none;
+            color: #858585;
+            cursor: pointer;
+            font-size: 12px;
+            padding: 1px 5px;
+            border-radius: 2px;
+        }
+        .edit-btn:hover {
+            color: #0e639c;
+            background-color: rgba(14, 99, 156, 0.1);
         }
         .delete-btn {
             background: none;
@@ -381,14 +421,102 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
             font-size: 14px;
             padding: 1px 5px;
             border-radius: 2px;
-            position: absolute;
-            right: 6px;
-            top: 50%;
-            transform: translateY(-50%);
         }
         .delete-btn:hover {
             color: #ff6b6b;
             background-color: rgba(255, 107, 107, 0.1);
+        }
+        /* 弹窗样式 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: #252526;
+            margin: 15% auto;
+            padding: 16px;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            width: 300px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .modal-title {
+            font-size: 14px;
+            font-weight: 500;
+            margin: 0;
+        }
+        .close-btn {
+            background: none;
+            border: none;
+            color: #858585;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+        }
+        .close-btn:hover {
+            color: #d4d4d4;
+        }
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-label {
+            display: block;
+            font-size: 12px;
+            margin-bottom: 4px;
+            color: #858585;
+        }
+        .form-input {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid #3e3e42;
+            border-radius: 3px;
+            background-color: #1e1e1e;
+            color: #d4d4d4;
+            font-size: 12px;
+            box-sizing: border-box;
+        }
+        .form-input:focus {
+            outline: none;
+            border-color: #0e639c;
+        }
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 16px;
+        }
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 3px;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background-color: #0e639c;
+            color: white;
+        }
+        .btn-primary:hover {
+            background-color: #1177bb;
+        }
+        .btn-secondary {
+            background-color: #3e3e42;
+            color: #d4d4d4;
+        }
+        .btn-secondary:hover {
+            background-color: #4e4e53;
         }
         .actions-bar {
             margin-bottom: 12px;
@@ -420,10 +548,29 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
         <ul id="references-list" class="references-list"></ul>
     </div>
 
+    <!-- 编辑标题弹窗 -->
+    <div id="edit-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">编辑标题</h3>
+                <button class="close-btn" id="close-modal">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="title-input">标题</label>
+                <input type="text" class="form-input" id="title-input" placeholder="输入标题...">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-btn">取消</button>
+                <button class="btn btn-primary" id="save-btn">保存</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const vscode = acquireVsCodeApi();
         let references = [];
         let draggedItem = null;
+        let currentEditingId = null;
 
         // 初始化
         vscode.postMessage({ command: 'getReferences' });
@@ -435,6 +582,62 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
                 vscode.postMessage({ command: 'showStorageLocation' });
             });
         }
+
+        // 初始化弹窗事件
+        const modal = document.getElementById('edit-modal');
+        const closeModal = document.getElementById('close-modal');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const saveBtn = document.getElementById('save-btn');
+        const titleInput = document.getElementById('title-input');
+
+        // 关闭弹窗
+        function hideModal() {
+            modal.style.display = 'none';
+            currentEditingId = null;
+            titleInput.value = '';
+        }
+
+        // 显示弹窗
+        function showModal(id, currentTitle) {
+            currentEditingId = id;
+            titleInput.value = currentTitle;
+            modal.style.display = 'block';
+            titleInput.focus();
+            titleInput.select();
+        }
+
+        // 弹窗事件监听
+        closeModal.addEventListener('click', hideModal);
+        cancelBtn.addEventListener('click', hideModal);
+        saveBtn.addEventListener('click', () => {
+            if (currentEditingId) {
+                const newTitle = titleInput.value.trim();
+                if (newTitle) {
+                    vscode.postMessage({ 
+                        command: 'updateReferenceTitle', 
+                        id: currentEditingId, 
+                        title: newTitle 
+                    });
+                    hideModal();
+                }
+            }
+        });
+
+        // 点击弹窗外部关闭
+        window.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                hideModal();
+            }
+        });
+
+        // 按下Enter键保存，按下Escape键取消
+        titleInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                saveBtn.click();
+            } else if (e.key === 'Escape') {
+                hideModal();
+            }
+        });
 
         // 处理消息
         window.addEventListener('message', event => {
@@ -479,7 +682,7 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 
                 // 点击跳转
                 li.addEventListener('click', (e) => {
-                    if (!e.target.classList.contains('delete-btn')) {
+                    if (!e.target.classList.contains('delete-btn') && !e.target.classList.contains('edit-btn')) {
                         vscode.postMessage({ command: 'jumpToReference', id: reference.id });
                     }
                 });
@@ -489,6 +692,19 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
                 titleH3.className = 'reference-title';
                 titleH3.textContent = reference.title;
 
+                // 创建操作栏
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'reference-actions';
+
+                // 编辑按钮
+                const editBtn = document.createElement('button');
+                editBtn.className = 'edit-btn';
+                editBtn.textContent = '编辑';
+                editBtn.onclick = function() {
+                    showModal(reference.id, reference.title);
+                };
+
+                // 删除按钮
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-btn';
                 deleteBtn.textContent = '×';
@@ -496,8 +712,12 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
                     vscode.postMessage({ command: 'deleteReference', id: reference.id });
                 };
 
+                // 组装元素
+                actionsDiv.appendChild(editBtn);
+                actionsDiv.appendChild(deleteBtn);
+                
                 li.appendChild(titleH3);
-                li.appendChild(deleteBtn);
+                li.appendChild(actionsDiv);
 
                 list.appendChild(li);
             });
