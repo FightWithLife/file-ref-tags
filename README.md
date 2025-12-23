@@ -178,6 +178,13 @@ Reference data is stored in the `references.json` file under VSCode extension's 
 
 ## Changelog
 
+### v0.0.2
+
+- Add external URL support via vscode:// protocol
+- Support absolute path, relative path, and file name only for file paths
+- Add code snippet filtering when multiple files match
+- Improve error handling with detailed error messages
+
 ### v0.0.1
 
 - Initial version
@@ -379,6 +386,13 @@ vscode://lirentech.file-ref-tags?filePath=src/extension.ts&snippet=// 注册处�
 - 操作系统：支持 Windows、macOS 和 Linux
 
 ## 更新日志
+
+### v0.0.2
+
+- 添加通过 vscode:// 协议的外部 URL 支持
+- 支持文件路径的绝对路径、相对路径和仅文件名
+- 当多个文件匹配时添加代码片段筛选
+- 改进错误处理，提供详细的错误信息
 
 ### v0.0.1
 
