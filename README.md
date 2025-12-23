@@ -21,6 +21,7 @@ File Ref Tags is a VSCode extension for managing and quickly accessing code refe
 - **Edit Title**: Hover to show edit button, click to modify title in popup
 - **Delete Reference**: Hover to show delete button, click to delete reference items
 - **View Storage Location**: Show the storage location of reference data
+- **External URL Support**: Support vscode:// protocol URL to trigger jump from external software
 
 ## Installation
 
@@ -92,6 +93,72 @@ Find the "File Ref Tags" icon in the left activity bar of VSCode and click to op
 - Click the "Show Storage Location" button at the bottom of the reference panel
 - The extension will show the JSON file that stores the reference data in the file explorer
 
+### 4. External URL Support
+
+File Ref Tags supports using vscode:// protocol URLs to trigger jumps from external software. This allows you to create links in external documents, emails, or other applications that can directly open specific files or code snippets in VSCode.
+
+#### 4.1 URL Format
+
+```
+vscode://lirentech.file-ref-tags?filePath=<file_path>&snippet=<code_snippet>
+```
+
+#### 4.2 Parameter Description
+
+| Parameter | Required | Description |
+|-----------|----------|-------------|
+| filePath  | No       | File path (supports absolute path, relative path, or just file name) |
+| snippet   | No       | Code snippet to search for |
+
+**Note**: At least one parameter must be provided.
+
+#### 4.3 Jump Modes
+
+The extension supports three jump modes based on the combination of parameters:
+
+| Mode | Parameters | Behavior |
+|------|------------|----------|
+| File | Only filePath | Open the specified file directly |
+| File + Snippet | Both filePath and snippet | Open the file and select the matching code snippet |
+| Global Snippet | Only snippet | Search for the snippet globally and open the matching file with the snippet selected |
+
+#### 4.4 Support for Relative Paths and File Names
+
+- **Absolute Path**: Directly open the file at the specified path
+- **Relative Path**: Search for the file in the current workspace
+- **Only File Name**: Search for all files with the matching name in the workspace and open the first match
+
+#### 4.5 Code Snippet Filtering
+
+When multiple files match the filePath parameter, the extension will filter the files by searching for the code snippet in each file. Only the file containing the specified code snippet will be opened.
+
+#### 4.6 Usage Examples
+
+1. **Open a file using absolute path**:
+   ```
+vscode://lirentech.file-ref-tags?filePath=/home/user/project/src/extension.ts
+```
+
+2. **Open a file using just file name**:
+   ```
+vscode://lirentech.file-ref-tags?filePath=extension.ts
+```
+
+3. **Open a file and select a specific snippet**:
+   ```
+vscode://lirentech.file-ref-tags?filePath=extension.ts&snippet=// 保存引用数据
+```
+
+4. **Search for a snippet globally**:
+   ```
+vscode://lirentech.file-ref-tags?snippet=const%20handleUri%20=%20async%20(uri:%20vscode.Uri)%20=>
+```
+
+5. **Open a file using relative path**:
+   ```
+vscode://lirentech.file-ref-tags?filePath=src/extension.ts&snippet=// 注册处理URI的逻辑
+```
+
 ## Data Storage
 
 Reference data is stored in the `references.json` file under VSCode extension's global storage directory, which can be viewed through the "Show Storage Location" button.
@@ -118,6 +185,7 @@ Reference data is stored in the `references.json` file under VSCode extension's 
 - Support drag and drop sorting and quick jumping
 - Support editing reference item titles
 - Support color differentiation for different types of reference items
+- Support external URL jump via vscode:// protocol
 
 ## Feedback and Suggestions
 
@@ -155,6 +223,7 @@ File Ref Tags 是一个 VSCode 扩展插件，用于管理和快速访问代码�
 - **编辑标题**：鼠标悬浮显示编辑按钮，点击弹窗修改标题
 - **删除引用**：鼠标悬浮显示删除按钮，点击删除引用项
 - **查看存储位置**：显示引用数据的存储位置
+- **外部 URL 支持**：支持 vscode:// 协议 URL 从外部软件触发跳转
 
 ## 安装方法
 
@@ -226,6 +295,72 @@ File Ref Tags 是一个 VSCode 扩展插件，用于管理和快速访问代码�
 - 点击引用面板底部的 "Show Storage Location" 按钮
 - 插件会在文件资源管理器中显示存储引用数据的 JSON 文件
 
+### 4. 外部 URL 支持
+
+File Ref Tags 支持使用 vscode:// 协议 URL 从外部软件触发跳转。这允许您在外部文档、电子邮件或其他应用程序中创建链接，直接在 VSCode 中打开特定文件或代码片段。
+
+#### 4.1 URL 格式
+
+```
+vscode://lirentech.file-ref-tags?filePath=<文件路径>&snippet=<代码片段>
+```
+
+#### 4.2 参数说明
+
+| 参数名 | 是否必填 | 描述 |
+|--------|----------|------|
+| filePath | 否 | 文件路径（支持绝对路径、相对路径或仅文件名） |
+| snippet | 否 | 要搜索的代码片段 |
+
+**注意**：至少必须提供一个参数。
+
+#### 4.3 跳转模式
+
+根据参数的组合，扩展支持三种跳转模式：
+
+| 模式 | 参数组合 | 行为 |
+|------|----------|------|
+| 文件 | 只有 filePath | 直接打开指定文件 |
+| 文件+片段 | 同时有 filePath 和 snippet | 打开文件并选中匹配的代码片段 |
+| 全局片段 | 只有 snippet | 全局搜索片段并打开匹配文件，选中该片段 |
+
+#### 4.4 支持相对路径和文件名
+
+- **绝对路径**：直接打开指定路径的文件
+- **相对路径**：在当前工作区中搜索文件
+- **仅文件名**：在工作区中搜索所有匹配名称的文件并打开第一个匹配项
+
+#### 4.5 代码片段筛选
+
+当多个文件匹配 filePath 参数时，扩展会通过在每个文件中搜索代码片段来筛选文件。只有包含指定代码片段的文件才会被打开。
+
+#### 4.6 使用示例
+
+1. **使用绝对路径打开文件**：
+   ```
+vscode://lirentech.file-ref-tags?filePath=/home/user/project/src/extension.ts
+```
+
+2. **仅使用文件名打开文件**：
+   ```
+vscode://lirentech.file-ref-tags?filePath=extension.ts
+```
+
+3. **打开文件并选中特定片段**：
+   ```
+vscode://lirentech.file-ref-tags?filePath=extension.ts&snippet=// 保存引用数据
+```
+
+4. **全局搜索片段**：
+   ```
+vscode://lirentech.file-ref-tags?snippet=const%20handleUri%20=%20async%20(uri:%20vscode.Uri)%20=>
+```
+
+5. **使用相对路径打开文件**：
+   ```
+vscode://lirentech.file-ref-tags?filePath=src/extension.ts&snippet=// 注册处理URI的逻辑
+```
+
 ## 数据存储
 
 引用数据存储在 VSCode 扩展的全局存储目录下的 `references.json` 文件中，路径可以通过 "Show Storage Location" 按钮查看。
@@ -252,6 +387,7 @@ File Ref Tags 是一个 VSCode 扩展插件，用于管理和快速访问代码�
 - 支持拖拽排序和快速跳转
 - 支持编辑引用项标题
 - 支持不同类型引用项的颜色区分
+- 支持通过 vscode:// 协议进行外部 URL 跳转
 
 ## 反馈与建议
 

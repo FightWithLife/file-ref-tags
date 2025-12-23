@@ -861,26 +861,114 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		} catch (error) {
 			console.error('Failed to handle URI:', error);
-			vscode.window.showErrorMessage('处理URL失败');
+			vscode.window.showErrorMessage(`处理URL失败：${error instanceof Error ? error.message : String(error)}`);
 		}
 	};
 
 	// 跳转到文件
 	const jumpToFile = async (filePath: string) => {
 		try {
-			const uri = vscode.Uri.file(filePath);
-			await vscode.window.showTextDocument(uri);
+			let fileUri: vscode.Uri;
+			
+			// 检查是否为绝对路径
+			if (path.isAbsolute(filePath)) {
+				fileUri = vscode.Uri.file(filePath);
+			} else {
+				// 相对路径或仅文件名，在工作区中查找
+				const workspaceFolders = vscode.workspace.workspaceFolders;
+				if (!workspaceFolders || workspaceFolders.length === 0) {
+					vscode.window.showErrorMessage('未打开工作区，无法使用相对路径或仅文件名');
+					return;
+				}
+				
+				// 查找匹配的文件
+				const matches: vscode.Uri[] = [];
+				for (const folder of workspaceFolders) {
+					// 直接匹配文件名
+					const files = await vscode.workspace.findFiles(`**/${filePath}`, '**/node_modules/**');
+					matches.push(...files);
+				}
+				
+				if (matches.length === 0) {
+					vscode.window.showErrorMessage(`未找到文件：${filePath}`);
+					return;
+				} else if (matches.length > 1) {
+					vscode.window.showWarningMessage(`找到多个匹配文件，将打开第一个：${filePath}`);
+				}
+				
+				fileUri = matches[0];
+			}
+			
+			await vscode.window.showTextDocument(fileUri);
 		} catch (error) {
 			console.error('Failed to jump to file:', error);
-			vscode.window.showErrorMessage('跳转到文件失败');
+			vscode.window.showErrorMessage(`跳转到文件失败：${error instanceof Error ? error.message : String(error)}`);
 		}
 	};
 
 	// 跳转到文件并搜索代码片段
 	const jumpToFileAndSnippet = async (filePath: string, snippet: string) => {
 		try {
-			const uri = vscode.Uri.file(filePath);
-			const textEditor = await vscode.window.showTextDocument(uri);
+			let fileUri: vscode.Uri;
+			
+			// 检查是否为绝对路径
+			if (path.isAbsolute(filePath)) {
+				fileUri = vscode.Uri.file(filePath);
+			} else {
+				// 相对路径或仅文件名，在工作区中查找
+				const workspaceFolders = vscode.workspace.workspaceFolders;
+				if (!workspaceFolders || workspaceFolders.length === 0) {
+					vscode.window.showErrorMessage('未打开工作区，无法使用相对路径或仅文件名');
+					return;
+				}
+				
+				// 查找匹配的文件，并结合代码片段筛选
+				const matches: vscode.Uri[] = [];
+				for (const folder of workspaceFolders) {
+					// 直接匹配文件名
+					const files = await vscode.workspace.findFiles(`**/${filePath}`, '**/node_modules/**');
+					matches.push(...files);
+				}
+				
+				if (matches.length === 0) {
+					vscode.window.showErrorMessage(`未找到文件：${filePath}`);
+					return;
+				}
+				
+				// 如果有多个匹配文件，结合代码片段筛选
+				let targetFileUri: vscode.Uri | undefined;
+				if (matches.length === 1) {
+					targetFileUri = matches[0];
+				} else {
+					vscode.window.showInformationMessage(`找到${matches.length}个匹配文件，正在结合代码片段筛选...`);
+					
+					// 遍历每个匹配文件，查找包含代码片段的文件
+					for (const match of matches) {
+						try {
+							const doc = await vscode.workspace.openTextDocument(match);
+							const text = doc.getText();
+							if (text.includes(snippet)) {
+								targetFileUri = match;
+								break;
+							}
+						} catch (error) {
+							console.error(`无法打开文件：${match.fsPath}`, error);
+							continue;
+						}
+					}
+					
+					if (!targetFileUri) {
+						vscode.window.showErrorMessage(`找到${matches.length}个匹配文件，但没有包含指定代码片段的文件：${filePath}`);
+						return;
+					}
+					
+					vscode.window.showInformationMessage(`已筛选出包含代码片段的文件：${path.basename(targetFileUri.fsPath)}`);
+				}
+				
+				fileUri = targetFileUri!;
+			}
+			
+			const textEditor = await vscode.window.showTextDocument(fileUri);
 			const doc = textEditor.document;
 			// 搜索代码片段
 			const text = doc.getText();
@@ -889,15 +977,15 @@ export function activate(context: vscode.ExtensionContext) {
 				const startPosition = doc.positionAt(index);
 				const endPosition = doc.positionAt(index + snippet.length);
 				const range = new vscode.Range(startPosition, endPosition);
-				await vscode.window.showTextDocument(uri, { selection: range });
+				await vscode.window.showTextDocument(fileUri, { selection: range });
 				// 确保选中的内容可见
 				await textEditor.revealRange(range, vscode.TextEditorRevealType.InCenter);
 			} else {
-				vscode.window.showWarningMessage('代码片段已不存在于文件中');
+				vscode.window.showWarningMessage(`文件中未找到指定代码片段：${fileUri.fsPath}`);
 			}
 		} catch (error) {
 			console.error('Failed to jump to file and snippet:', error);
-			vscode.window.showErrorMessage('跳转到文件并搜索代码片段失败');
+			vscode.window.showErrorMessage(`跳转到文件并搜索代码片段失败：${error instanceof Error ? error.message : String(error)}`);
 		}
 	};
 
@@ -951,7 +1039,7 @@ export function activate(context: vscode.ExtensionContext) {
 			}
 		} catch (error) {
 			console.error('Global search failed:', error);
-			vscode.window.showErrorMessage('全局搜索失败');
+			vscode.window.showErrorMessage(`全局搜索失败：${error instanceof Error ? error.message : String(error)}`);
 		}
 	};
 
