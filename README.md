@@ -11,6 +11,13 @@ File Ref Tags is a VSCode extension for managing and quickly accessing code refe
 - **Add File + Snippet**: Add the current file and selected code snippet to the reference panel
 - **Add Global Snippet**: Add the selected globally unique snippet to the reference panel
 - **Add User Comment**: Add custom comments to the reference panel
+- **Copy vscode:// Links**: Copy vscode:// protocol links to clipboard with various path formats
+  - Snippet only
+  - File name only
+  - File name + snippet (with keyboard shortcut)
+  - Parent directory + file name + snippet
+  - Workspace path + snippet
+- **Keyboard Shortcut**: Quick copy link with `Cmd+Shift+Option+C` (Mac) / `Ctrl+Shift+Alt+C` (Windows/Linux)
 - **Type Color Differentiation**: Different colors for different types of reference items
   - File: Deep blue
   - File + Snippet: Deep pink
@@ -63,6 +70,31 @@ Find the "File Ref Tags" icon in the left activity bar of VSCode and click to op
 - Right-click in the editor, select "FileRefTags" → "Add User Comment to Panel"
 - Or use the command palette and enter "FileRefTags: Add User Comment to Panel"
 - Enter the comment content in the popup input box and click OK
+
+#### 2.5 Copy Link (vscode:// Protocol)
+
+The extension provides 5 commands to copy vscode:// protocol links to the clipboard:
+
+- **Copy Link (Snippet Only)**: Copy a link with only the selected code snippet
+  - Right-click in the editor, select "FileRefTags" → "Copy Link (Snippet Only)"
+  - Format: `vscode://lirentech.file-ref-tags?snippet=<code_snippet>`
+
+- **Copy Link (File Name Only)**: Copy a link with only the file name
+  - Right-click in the editor, select "FileRefTags" → "Copy Link (File Name Only)"
+  - Format: `vscode://lirentech.file-ref-tags?filePath=<file_name>`
+
+- **Copy Link (File Name + Snippet)**: Copy a link with file name and code snippet
+  - Right-click in the editor, select "FileRefTags" → "Copy Link (File Name + Snippet)"
+  - Or use keyboard shortcut: `Cmd+Shift+Option+C` (Mac) / `Ctrl+Shift+Alt+C` (Windows/Linux)
+  - Format: `vscode://lirentech.file-ref-tags?filePath=<file_name>&snippet=<code_snippet>`
+
+- **Copy Link (Parent Directory + File Name + Snippet)**: Copy a link with parent directory, file name, and code snippet
+  - Right-click in the editor, select "FileRefTags" → "Copy Link (Parent Directory + File Name + Snippet)"
+  - Format: `vscode://lirentech.file-ref-tags?filePath=<parent_dir>/<file_name>&snippet=<code_snippet>`
+
+- **Copy Link (Workspace Path + Snippet)**: Copy a link with workspace-relative path and code snippet
+  - Right-click in the editor, select "FileRefTags" → "Copy Link (Workspace Path + Snippet)"
+  - Format: `vscode://lirentech.file-ref-tags?filePath=<workspace_relative_path>&snippet=<code_snippet>`
 
 ### 3. Manage Reference Items
 
@@ -178,6 +210,16 @@ Reference data is stored in the `references.json` file under VSCode extension's 
 
 ## Changelog
 
+### v0.0.3
+
+- Add 5 new commands to copy vscode:// protocol links to clipboard
+  - Copy Link (Snippet Only)
+  - Copy Link (File Name Only)
+  - Copy Link (File Name + Snippet)
+  - Copy Link (Parent Directory + File Name + Snippet)
+  - Copy Link (Workspace Path + Snippet)
+- Add keyboard shortcut for "Copy Link (File Name + Snippet)": `Cmd+Shift+Option+C` (Mac) / `Ctrl+Shift+Alt+C` (Windows/Linux)
+
 ### v0.0.2
 
 - Add external URL support via vscode:// protocol
@@ -220,6 +262,13 @@ File Ref Tags 是一个 VSCode 扩展插件，用于管理和快速访问代码�
 - **添加文件+片段**：将当前文件和选中的代码片段添加到引用面板
 - **添加全局片段**：将当前选中的全局唯一片段添加到引用面板
 - **添加用户注释**：添加自定义注释到引用面板
+- **复制 vscode:// 链接**：将 vscode:// 协议链接复制到剪贴板，支持多种路径格式
+  - 仅代码片段
+  - 仅文件名
+  - 文件名+代码片段（支持快捷键）
+  - 父级文件夹+文件名+代码片段
+  - 项目级路径+代码片段
+- **快捷键支持**：快速复制链接，快捷键为 `Cmd+Shift+Option+C` (Mac) / `Ctrl+Shift+Alt+C` (Windows/Linux)
 - **类型颜色区分**：不同类型的引用项显示不同颜色
   - 文件：深蓝色
   - 文件+片段：深粉色
@@ -272,6 +321,31 @@ File Ref Tags 是一个 VSCode 扩展插件，用于管理和快速访问代码�
 - 右键点击编辑器，选择 "FileRefTags" → "添加用户注释到面板"
 - 或使用命令面板输入 "FileRefTags: 添加用户注释到面板"
 - 在弹出的输入框中输入注释内容，点击确定
+
+#### 2.5 复制链接（vscode:// 协议）
+
+插件提供了 5 个命令用于将 vscode:// 协议链接复制到剪贴板：
+
+- **复制链接（仅代码片段）**：复制仅包含选中代码片段的链接
+  - 右键点击编辑器，选择 "FileRefTags" → "复制链接（仅代码片段）"
+  - 格式：`vscode://lirentech.file-ref-tags?snippet=<代码片段>`
+
+- **复制链接（仅文件名）**：复制仅包含文件名的链接
+  - 右键点击编辑器，选择 "FileRefTags" → "复制链接（仅文件名）"
+  - 格式：`vscode://lirentech.file-ref-tags?filePath=<文件名>`
+
+- **复制链接（文件名+代码片段）**：复制包含文件名和代码片段的链接
+  - 右键点击编辑器，选择 "FileRefTags" → "复制链接（文件名+代码片段）"
+  - 或使用快捷键：`Cmd+Shift+Option+C` (Mac) / `Ctrl+Shift+Alt+C` (Windows/Linux)
+  - 格式：`vscode://lirentech.file-ref-tags?filePath=<文件名>&snippet=<代码片段>`
+
+- **复制链接（父级文件夹+文件名+代码片段）**：复制包含父级文件夹、文件名和代码片段的链接
+  - 右键点击编辑器，选择 "FileRefTags" → "复制链接（父级文件夹+文件名+代码片段）"
+  - 格式：`vscode://lirentech.file-ref-tags?filePath=<父级文件夹>/<文件名>&snippet=<代码片段>`
+
+- **复制链接（项目级路径+代码片段）**：复制包含项目相对路径和代码片段的链接
+  - 右键点击编辑器，选择 "FileRefTags" → "复制链接（项目级路径+代码片段）"
+  - 格式：`vscode://lirentech.file-ref-tags?filePath=<项目相对路径>&snippet=<代码片段>`
 
 ### 3. 管理引用项
 
@@ -386,6 +460,16 @@ vscode://lirentech.file-ref-tags?filePath=src/extension.ts&snippet=// 注册处�
 - 操作系统：支持 Windows、macOS 和 Linux
 
 ## 更新日志
+
+### v0.0.3
+
+- 新增 5 个复制 vscode:// 协议链接的命令
+  - 复制链接（仅代码片段）
+  - 复制链接（仅文件名）
+  - 复制链接（文件名+代码片段）
+  - 复制链接（父级文件夹+文件名+代码片段）
+  - 复制链接（项目级路径+代码片段）
+- 为"复制链接（文件名+代码片段）"命令添加快捷键：`Cmd+Shift+Option+C` (Mac) / `Ctrl+Shift+Alt+C` (Windows/Linux)
 
 ### v0.0.2
 
