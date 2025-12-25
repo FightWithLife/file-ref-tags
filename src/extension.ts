@@ -729,6 +729,172 @@ export function activate(context: vscode.ExtensionContext) {
 	});
 
 	context.subscriptions.push(addCommentDisposable);
+
+	// 辅助函数：生成 vscode:// 链接
+	const generateVscodeLink = (filePath?: string, snippet?: string): string => {
+		const baseUrl = 'vscode://lirentech.file-ref-tags';
+		const params = new URLSearchParams();
+		
+		if (filePath) {
+			params.append('filePath', filePath);
+		}
+		if (snippet) {
+			params.append('snippet', snippet);
+		}
+		
+		const queryString = params.toString();
+		return queryString ? `${baseUrl}?${queryString}` : baseUrl;
+	};
+
+	// 辅助函数：获取相对于工作区的路径
+	const getWorkspaceRelativePath = (filePath: string): string | undefined => {
+		const workspaceFolders = vscode.workspace.workspaceFolders;
+		if (!workspaceFolders || workspaceFolders.length === 0) {
+			return undefined;
+		}
+		
+		// 查找匹配的工作区文件夹
+		for (const folder of workspaceFolders) {
+			const folderPath = folder.uri.fsPath;
+			if (filePath.startsWith(folderPath)) {
+				// 获取相对于工作区的路径
+				const relativePath = path.relative(folderPath, filePath);
+				return relativePath;
+			}
+		}
+		
+		return undefined;
+	};
+
+	// 注册复制链接（仅代码片段）的命令
+	const copyLinkSnippetOnlyDisposable = vscode.commands.registerCommand('file-ref-tags.copyLinkSnippetOnly', async () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage('没有打开的文件');
+			return;
+		}
+
+		const selection = editor.selection;
+		if (selection.isEmpty) {
+			vscode.window.showErrorMessage('请先选中代码片段');
+			return;
+		}
+
+		const snippet = editor.document.getText(selection);
+		const link = generateVscodeLink(undefined, snippet);
+		
+		await vscode.env.clipboard.writeText(link);
+		vscode.window.showInformationMessage('链接已复制到剪贴板');
+	});
+
+	context.subscriptions.push(copyLinkSnippetOnlyDisposable);
+
+	// 注册复制链接（仅文件名）的命令
+	const copyLinkFileNameOnlyDisposable = vscode.commands.registerCommand('file-ref-tags.copyLinkFileNameOnly', async () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage('没有打开的文件');
+			return;
+		}
+
+		const document = editor.document;
+		const filePath = document.uri.fsPath;
+		const fileName = path.basename(filePath);
+		const link = generateVscodeLink(fileName, undefined);
+		
+		await vscode.env.clipboard.writeText(link);
+		vscode.window.showInformationMessage('链接已复制到剪贴板');
+	});
+
+	context.subscriptions.push(copyLinkFileNameOnlyDisposable);
+
+	// 注册复制链接（文件名+代码片段）的命令
+	const copyLinkFileNameAndSnippetDisposable = vscode.commands.registerCommand('file-ref-tags.copyLinkFileNameAndSnippet', async () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage('没有打开的文件');
+			return;
+		}
+
+		const selection = editor.selection;
+		if (selection.isEmpty) {
+			vscode.window.showErrorMessage('请先选中代码片段');
+			return;
+		}
+
+		const document = editor.document;
+		const filePath = document.uri.fsPath;
+		const fileName = path.basename(filePath);
+		const snippet = document.getText(selection);
+		const link = generateVscodeLink(fileName, snippet);
+		
+		await vscode.env.clipboard.writeText(link);
+		vscode.window.showInformationMessage('链接已复制到剪贴板');
+	});
+
+	context.subscriptions.push(copyLinkFileNameAndSnippetDisposable);
+
+	// 注册复制链接（父级文件夹+文件名+代码片段）的命令
+	const copyLinkParentDirAndSnippetDisposable = vscode.commands.registerCommand('file-ref-tags.copyLinkParentDirAndSnippet', async () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage('没有打开的文件');
+			return;
+		}
+
+		const selection = editor.selection;
+		if (selection.isEmpty) {
+			vscode.window.showErrorMessage('请先选中代码片段');
+			return;
+		}
+
+		const document = editor.document;
+		const filePath = document.uri.fsPath;
+		const dirName = path.basename(path.dirname(filePath));
+		const fileName = path.basename(filePath);
+		const parentDirAndFileName = `${dirName}/${fileName}`;
+		const snippet = document.getText(selection);
+		const link = generateVscodeLink(parentDirAndFileName, snippet);
+		
+		await vscode.env.clipboard.writeText(link);
+		vscode.window.showInformationMessage('链接已复制到剪贴板');
+	});
+
+	context.subscriptions.push(copyLinkParentDirAndSnippetDisposable);
+
+	// 注册复制链接（项目级路径+代码片段）的命令
+	const copyLinkWorkspacePathAndSnippetDisposable = vscode.commands.registerCommand('file-ref-tags.copyLinkWorkspacePathAndSnippet', async () => {
+		const editor = vscode.window.activeTextEditor;
+		if (!editor) {
+			vscode.window.showErrorMessage('没有打开的文件');
+			return;
+		}
+
+		const selection = editor.selection;
+		if (selection.isEmpty) {
+			vscode.window.showErrorMessage('请先选中代码片段');
+			return;
+		}
+
+		const document = editor.document;
+		const filePath = document.uri.fsPath;
+		const workspaceRelativePath = getWorkspaceRelativePath(filePath);
+		
+		if (!workspaceRelativePath) {
+			vscode.window.showErrorMessage('无法获取项目级路径，请确保文件在工作区内');
+			return;
+		}
+
+		const snippet = document.getText(selection);
+		// 将路径分隔符统一为正斜杠（URL友好）
+		const normalizedPath = workspaceRelativePath.replace(/\\/g, '/');
+		const link = generateVscodeLink(normalizedPath, snippet);
+		
+		await vscode.env.clipboard.writeText(link);
+		vscode.window.showInformationMessage('链接已复制到剪贴板');
+	});
+
+	context.subscriptions.push(copyLinkWorkspacePathAndSnippetDisposable);
 }
 
 // This method is called when your extension is deactivated

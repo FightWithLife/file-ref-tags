@@ -42,6 +42,31 @@
         "command": "file-ref-tags.addComment",
         "title": "添加用户注释到面板",
         "category": "FileRefTags"
+      },
+      {
+        "command": "file-ref-tags.copyLinkSnippetOnly",
+        "title": "复制链接（仅代码片段）",
+        "category": "FileRefTags"
+      },
+      {
+        "command": "file-ref-tags.copyLinkFileNameOnly",
+        "title": "复制链接（仅文件名）",
+        "category": "FileRefTags"
+      },
+      {
+        "command": "file-ref-tags.copyLinkFileNameAndSnippet",
+        "title": "复制链接（文件名+代码片段）",
+        "category": "FileRefTags"
+      },
+      {
+        "command": "file-ref-tags.copyLinkParentDirAndSnippet",
+        "title": "复制链接（父级文件夹+文件名+代码片段）",
+        "category": "FileRefTags"
+      },
+      {
+        "command": "file-ref-tags.copyLinkWorkspacePathAndSnippet",
+        "title": "复制链接（项目级路径+代码片段）",
+        "category": "FileRefTags"
       }
     ],
     "menus": {
@@ -68,6 +93,26 @@
         {
           "command": "file-ref-tags.addComment",
           "group": "file-ref-tags@4"
+        },
+        {
+          "command": "file-ref-tags.copyLinkSnippetOnly",
+          "group": "file-ref-tags@5"
+        },
+        {
+          "command": "file-ref-tags.copyLinkFileNameOnly",
+          "group": "file-ref-tags@6"
+        },
+        {
+          "command": "file-ref-tags.copyLinkFileNameAndSnippet",
+          "group": "file-ref-tags@7"
+        },
+        {
+          "command": "file-ref-tags.copyLinkParentDirAndSnippet",
+          "group": "file-ref-tags@8"
+        },
+        {
+          "command": "file-ref-tags.copyLinkWorkspacePathAndSnippet",
+          "group": "file-ref-tags@9"
         }
       ]
     },
@@ -100,7 +145,19 @@
           "contextualTitle": "File Ref Tags"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "file-ref-tags.copyLinkFileNameAndSnippet",
+        "key": "cmd+shift+alt+c",
+        "when": "editorTextFocus && !editorReadonly && isMac"
+      },
+      {
+        "command": "file-ref-tags.copyLinkFileNameAndSnippet",
+        "key": "ctrl+shift+alt+c",
+        "when": "editorTextFocus && !editorReadonly && !isMac"
+      }
+    ]
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
