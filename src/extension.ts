@@ -166,6 +166,25 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 				this._sendReferences();
 			}
 		});
+
+		// 监听主题变化
+		// 注意：VS Code的CSS变量会自动更新，但为了确保兼容性，我们在主题变化时重新设置HTML
+		const themeChangeDisposable = vscode.window.onDidChangeActiveColorTheme(() => {
+			if (this._webviewView?.visible) {
+				// 重新设置HTML内容以应用新的主题变量
+				// CSS变量会自动更新，但重新设置HTML可以确保所有样式都正确应用
+				this._webviewView.webview.html = this._getHtmlForWebview(this._webviewView.webview);
+				// 重新发送引用数据以恢复状态
+				setTimeout(() => {
+					this._sendReferences();
+				}, 50);
+			}
+		});
+
+		// 将主题变化监听器添加到webview的dispose中
+		webviewView.onDidDispose(() => {
+			themeChangeDisposable.dispose();
+		});
 	}
 
 	// 发送引用数据到webview
