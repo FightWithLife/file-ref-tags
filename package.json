@@ -75,7 +75,7 @@
         {
           "submenu": "file-ref-tags.submenu",
           "title": "FileRefTags",
-          "group": "navigation"
+          "group": "9_cutcopypaste"
         }
       ],
       "file-ref-tags.submenu": [
