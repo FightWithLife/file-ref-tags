@@ -13,7 +13,11 @@ class ReferenceDataManager {
 
 	constructor(context: vscode.ExtensionContext) {
 		// 获取存储路径
-		this.storagePath = path.join(context.globalStorageUri.fsPath, 'references.json');
+		if (context.storageUri) {
+			this.storagePath = path.join(context.storageUri?.fsPath, 'references.json');
+		} else { 
+			this.storagePath = path.join(context.globalStorageUri.fsPath, 'references.json');
+		}
 		// 确保存储目录存在
 		fs.mkdirSync(path.dirname(this.storagePath), { recursive: true });
 		// 加载数据
