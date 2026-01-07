@@ -12,45 +12,60 @@ export const TEMPLATE = `<!DOCTYPE html>
             padding: 0;
             background-color: var(--vscode-editor-background, #1e1e1e);
             color: var(--vscode-editor-foreground, #d4d4d4);
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 400;
+            height: 100vh;
+            overflow: hidden;
         }
         .container {
-            padding: 8px 4px;
+            padding: 6px 2px;
             display: flex;
             flex-direction: column;
-            height: 100%;
+            height: calc(100vh - 12px);
+            overflow-y: auto;
         }
         h1 {
-            font-size: 14px;
-            margin: 0 0 10px 0;
-            font-weight: 400;
-            color: var(--vscode-editor-foreground, #d4d4d4);
+            font-size: 13px;
+            margin: 0 0 8px 0;
+            font-weight: 500;
+            color: var(--vscode-foreground, #cccccc);
+            padding: 0 6px;
+            border-bottom: 1px solid var(--vscode-panel-border, #3e3e42);
+            padding-bottom: 4px;
         }
         .empty-state {
             text-align: center;
-            padding: 32px 0;
+            padding: 24px 0;
             color: var(--vscode-descriptionForeground, #858585);
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         .references-list {
             list-style-type: none;
             padding: 0;
             margin: 0;
+            flex: 1;
+            overflow-y: auto;
         }
         .reference-group {
-            margin-bottom: 12px;
+            margin: 6px 2px;
             border: 1px solid var(--vscode-panel-border, #3e3e42);
             border-radius: 4px;
             overflow: hidden;
+            background-color: rgba(60, 60, 65, 0.4);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
         }
         .group-header {
             padding: 6px 8px;
-            background-color: var(--vscode-sideBar-background, #38383d);
+            background-color: rgba(65, 65, 70, 0.5);
             cursor: pointer;
             display: flex;
             justify-content: space-between;
             align-items: center;
             user-select: none;
+            border-bottom: 1px solid var(--vscode-panel-border, #3e3e42);
         }
         .group-title {
             font-weight: 500;
@@ -58,21 +73,22 @@ export const TEMPLATE = `<!DOCTYPE html>
             display: flex;
             align-items: center;
             gap: 6px;
+            font-size: 12px;
         }
         .group-actions {
             display: flex;
-            gap: 4px;
+            gap: 3px;
         }
         .group-content {
             padding: 4px 0;
         }
         .group-items {
-            padding-left: 8px;
+            padding-left: 6px;
         }
         .reference-item {
-            outline: 2px solid var(--vscode-panel-border, #3e3e42);
-            padding: 0 6px;
-            margin: 0 0 6px 0;
+            outline: 1px solid var(--vscode-panel-border, #3e3e42);
+            padding: 4px 8px;
+            margin: 0 4px 4px;
             cursor: pointer;
             transition: all 0.2s ease;
             user-select: none;
@@ -80,35 +96,41 @@ export const TEMPLATE = `<!DOCTYPE html>
             justify-content: space-between;
             align-items: center;
             position: relative;
-            line-height: 26px;
+            line-height: 16px;
             background-color: var(--vscode-editor-background, #1e1e1e);
-            border-radius: 4px;
+            border-radius: 3px;
+            min-height: 26px;
         }
         .reference-item[data-type="file"] {
-            background-color: rgba(14, 99, 156, 0.15);
+            background-color: rgba(14, 99, 156, 0.1);
+            border-left: 2px solid rgba(14, 99, 156, 0.7);
         }
         .reference-item[data-type="file-snippet"] {
-            background-color: rgba(180, 40, 80, 0.15);
+            background-color: rgba(180, 40, 80, 0.1);
+            border-left: 2px solid rgba(180, 40, 80, 0.7);
         }
         .reference-item[data-type="global-snippet"] {
-            background-color: rgba(74, 22, 140, 0.15);
+            background-color: rgba(74, 22, 140, 0.1);
+            border-left: 2px solid rgba(74, 22, 140, 0.7);
         }
         .reference-item[data-type="comment"] {
-            background-color: rgba(0, 125, 74, 0.15);
+            background-color: rgba(0, 125, 74, 0.1);
+            border-left: 2px solid rgba(0, 125, 74, 0.7);
         }
         .reference-item:hover {
             background-color: var(--vscode-list-hoverBackground, #2a2d2e) !important;
             outline-color: var(--vscode-input-focusBorder, #0e639c);
+            transform: translateX(2px);
         }
         .reference-item.dragging {
-            opacity: 0.5;
-            outline: 2px dashed var(--vscode-input-focusBorder, #0e639c);
+            opacity: 0.7;
+            outline: 1px dashed var(--vscode-input-focusBorder, #0e639c);
         }
         .reference-item.drag-over {
-            border-top: 2px solid var(--vscode-input-focusBorder, #0e639c);
+            border-top: 1px solid var(--vscode-input-focusBorder, #0e639c);
         }
         .reference-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 400;
             margin: 0;
             white-space: nowrap;
@@ -116,17 +138,20 @@ export const TEMPLATE = `<!DOCTYPE html>
             text-overflow: ellipsis;
             flex: 1;
             color: var(--vscode-editor-foreground, #d4d4d4);
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
         }
         .reference-item:hover .reference-title {
-            margin-right: 80px;
             color: var(--vscode-list-hoverForeground, #cccccc);
         }
         .reference-type {
-            font-size: 11px;
-            padding: 1px 4px;
+            font-size: 9px;
+            padding: 1px 3px;
             border-radius: 2px;
-            margin-left: 8px;
+            margin-left: 6px;
             text-transform: uppercase;
+            align-self: flex-start;
         }
         .reference-type[data-type="file"] {
             background-color: rgba(14, 99, 156, 0.4);
@@ -154,51 +179,40 @@ export const TEMPLATE = `<!DOCTYPE html>
             opacity: 0;
             transition: opacity 0.2s ease;
             pointer-events: none;
+            background: var(--vscode-editor-background, #1e1e1e);
+            padding: 1px;
+            border-radius: 2px;
         }
         .reference-item:hover .reference-actions {
             pointer-events: auto;
-        }
-        .reference-item:hover .reference-actions {
             opacity: 1;
         }
-        .edit-btn {
+        .edit-btn, .ungroup-btn {
             background: none;
             border: none;
             color: var(--vscode-descriptionForeground, #858585);
             cursor: pointer;
-            font-size: 14px;
-            padding: 1px 5px;
+            font-size: 11px;
+            padding: 2px 5px;
             border-radius: 2px;
+            min-width: 34px;
         }
-        .edit-btn:hover {
+        .edit-btn:hover, .ungroup-btn:hover {
             color: var(--vscode-textLink-foreground, #3794ff);
-            background-color: var(--vscode-list-hoverBackground, #2a2d2e);
+            background-color: var(--vscode-toolbar-hoverBackground, #2a2d2e);
         }
         .delete-btn {
             background: none;
             border: none;
             color: var(--vscode-descriptionForeground, #858585);
             cursor: pointer;
-            font-size: 16px;
-            padding: 1px 5px;
+            font-size: 13px;
+            padding: 2px 5px;
             border-radius: 2px;
         }
         .delete-btn:hover {
             color: var(--vscode-errorForeground, #f48771);
-            background-color: var(--vscode-list-hoverBackground, #2a2d2e);
-        }
-        .ungroup-btn {
-            background: none;
-            border: none;
-            color: var(--vscode-descriptionForeground, #858585);
-            cursor: pointer;
-            font-size: 12px;
-            padding: 2px 4px;
-            border-radius: 2px;
-        }
-        .ungroup-btn:hover {
-            color: var(--vscode-textLink-foreground, #3794ff);
-            background-color: var(--vscode-list-hoverBackground, #2a2d2e);
+            background-color: var(--vscode-toolbar-hoverBackground, #2a2d2e);
         }
         /* 弹窗样式 */
         .modal {
@@ -209,26 +223,26 @@ export const TEMPLATE = `<!DOCTYPE html>
             top: 0;
             width: 100%;
             height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
+            background-color: rgba(0, 0, 0, 0.6);
         }
         .modal-content {
             background-color: var(--vscode-editor-background, #1e1e1e);
-            margin: 15% auto;
+            margin: 25% auto;
             padding: 12px;
             border: 1px solid var(--vscode-panel-border, #3e3e42);
             border-radius: 4px;
             width: 220px;
             max-width: 90%;
-            box-shadow: 0 4px 8px var(--vscode-widget-shadow, rgba(0, 0, 0, 0.3));
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         }
         .modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         .modal-title {
-            font-size: 14px;
+            font-size: 13px;
             font-weight: 500;
             margin: 0;
             color: var(--vscode-editor-foreground, #d4d4d4);
@@ -240,22 +254,29 @@ export const TEMPLATE = `<!DOCTYPE html>
             cursor: pointer;
             font-size: 16px;
             padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 2px;
         }
         .close-btn:hover {
+            background-color: var(--vscode-toolbar-hoverBackground, #2a2d2e);
             color: var(--vscode-editor-foreground, #d4d4d4);
         }
         .form-group {
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
         .form-label {
             display: block;
-            font-size: 12px;
+            font-size: 11px;
             margin-bottom: 4px;
             color: var(--vscode-descriptionForeground, #858585);
         }
-        .form-input {
+        .form-input, .form-select {
             width: 100%;
-            padding: 6px 8px;
+            padding: 5px 8px;
             border: 1px solid var(--vscode-input-border, #3e3e42);
             border-radius: 3px;
             background-color: var(--vscode-input-background, #3c3c3c);
@@ -263,32 +284,24 @@ export const TEMPLATE = `<!DOCTYPE html>
             font-size: 12px;
             box-sizing: border-box;
         }
-        .form-input:focus {
+        .form-input:focus, .form-select:focus {
             outline: none;
             border-color: var(--vscode-input-focusBorder, #0e639c);
-        }
-        .form-select {
-            width: 100%;
-            padding: 6px 8px;
-            border: 1px solid var(--vscode-input-border, #3e3e42);
-            border-radius: 3px;
-            background-color: var(--vscode-input-background, #3c3c3c);
-            color: var(--vscode-input-foreground, #cccccc);
-            font-size: 12px;
-            box-sizing: border-box;
+            box-shadow: 0 0 0 1px rgba(14, 99, 156, 0.3);
         }
         .modal-footer {
             display: flex;
             justify-content: flex-end;
-            gap: 8px;
-            margin-top: 16px;
+            gap: 6px;
+            margin-top: 6px;
         }
         .btn {
-            padding: 6px 12px;
+            padding: 5px 10px;
             border: none;
             border-radius: 3px;
             font-size: 12px;
             cursor: pointer;
+            min-width: 50px;
         }
         .btn-primary {
             background-color: var(--vscode-button-background, #0e639c);
@@ -308,6 +321,7 @@ export const TEMPLATE = `<!DOCTYPE html>
             margin-top: 8px;
             display: flex;
             gap: 4px;
+            padding: 0 2px;
         }
         .action-btn {
             background-color: var(--vscode-button-background, #0e639c);
@@ -317,6 +331,8 @@ export const TEMPLATE = `<!DOCTYPE html>
             font-size: 12px;
             cursor: pointer;
             width: 100%;
+            border-radius: 3px;
+            transition: background-color 0.2s;
         }
         .action-btn:hover {
             background-color: var(--vscode-button-hoverBackground, #1177bb);
@@ -329,9 +345,25 @@ export const TEMPLATE = `<!DOCTYPE html>
             font-size: 12px;
             cursor: pointer;
             width: 100%;
+            border-radius: 3px;
+            transition: background-color 0.2s;
         }
         .add-group-btn:hover {
             background-color: var(--vscode-button-secondaryHoverBackground, #454545);
+        }
+        
+        /* 隐藏内容的样式 */
+        .hidden {
+            display: none;
+        }
+        
+        /* 旋转箭头指示器 */
+        .expand-indicator {
+            transition: transform 0.2s ease;
+            font-size: 11px;
+        }
+        .expanded .expand-indicator {
+            transform: rotate(90deg);
         }
     </style>
 </head>
@@ -343,7 +375,6 @@ export const TEMPLATE = `<!DOCTYPE html>
         </div>
         <ul id="references-list" class="references-list"></ul>
         <div class="actions-bar">
-            <button id="add-group-btn" class="add-group-btn">Add Group</button>
             <button id="show-storage-btn" class="action-btn">Show Storage Location</button>
         </div>
     </div>
@@ -411,6 +442,7 @@ export const TEMPLATE = `<!DOCTYPE html>
         let draggedItem = null;
         let currentEditingId = null;
         let currentGroupId = null; // 当前正在移动的引用项ID
+        let expandedGroups = {}; // 记录展开/折叠状态
 
         // 初始化
         vscode.postMessage({ command: 'getReferences' });
@@ -423,14 +455,6 @@ export const TEMPLATE = `<!DOCTYPE html>
             });
         }
 
-        // 添加分组按钮事件
-        const addGroupBtn = document.getElementById('add-group-btn');
-        if (addGroupBtn) {
-            addGroupBtn.addEventListener('click', () => {
-                document.getElementById('group-name-input').value = '';
-                document.getElementById('add-group-modal').style.display = 'block';
-            });
-        }
 
         // 初始化弹窗事件
         const editModal = document.getElementById('edit-modal');
@@ -636,13 +660,25 @@ export const TEMPLATE = `<!DOCTYPE html>
                 if (groupedReferences[group.id] && groupedReferences[group.id].length > 0) {
                     const groupLi = document.createElement('li');
                     groupLi.className = 'reference-group';
+                    groupLi.dataset.id = group.id;
 
                     const groupHeader = document.createElement('div');
-                    groupHeader.className = 'group-header';
+                    groupHeader.className = 'group-header expanded'; // 默认展开
+                    groupHeader.onclick = toggleGroup.bind(null, group.id);
 
                     const groupTitle = document.createElement('div');
                     groupTitle.className = 'group-title';
-                    groupTitle.innerHTML = '<span>📁</span><span>' + group.name + '</span>';
+                    
+                    // 添加展开/折叠箭头
+                    const expandIndicator = document.createElement('span');
+                    expandIndicator.className = 'expand-indicator';
+                    expandIndicator.textContent = '▶';
+                    
+                    const groupNameSpan = document.createElement('span');
+                    groupNameSpan.textContent = group.name;
+
+                    groupTitle.appendChild(expandIndicator);
+                    groupTitle.appendChild(groupNameSpan);
 
                     const groupActions = document.createElement('div');
                     groupActions.className = 'group-actions';
@@ -675,6 +711,15 @@ export const TEMPLATE = `<!DOCTYPE html>
                     groupContent.appendChild(groupItemsUl);
                     groupLi.appendChild(groupContent);
                     list.appendChild(groupLi);
+                    
+                    // 设置初始显示状态
+                    if (!expandedGroups[group.id]) {
+                        groupContent.style.display = 'none';
+                        groupHeader.classList.remove('expanded');
+                    } else {
+                        groupContent.style.display = 'block';
+                        groupHeader.classList.add('expanded');
+                    }
                 }
             });
 
@@ -683,6 +728,26 @@ export const TEMPLATE = `<!DOCTYPE html>
                 ungroupedReferences.forEach(reference => {
                     list.appendChild(createReferenceElement(reference));
                 });
+            }
+        }
+
+        // 切换分组展开/折叠状态
+        function toggleGroup(groupId) {
+            const groupElement = document.querySelector('.reference-group[data-id="' + groupId + '"]');
+            if (!groupElement) return;
+
+            const groupContent = groupElement.querySelector('.group-content');
+            const groupHeader = groupElement.querySelector('.group-header');
+            const expandIndicator = groupElement.querySelector('.expand-indicator');
+
+            if (groupContent.style.display === 'none') {
+                groupContent.style.display = 'block';
+                groupHeader.classList.add('expanded');
+                expandedGroups[groupId] = true;
+            } else {
+                groupContent.style.display = 'none';
+                groupHeader.classList.remove('expanded');
+                expandedGroups[groupId] = false;
             }
         }
 
@@ -709,6 +774,12 @@ export const TEMPLATE = `<!DOCTYPE html>
                     !e.target.classList.contains('ungroup-btn')) {
                     vscode.postMessage({ command: 'jumpToReference', id: reference.id });
                 }
+            });
+
+            // 右键菜单
+            li.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showGroupModal(reference.id);
             });
 
             // 创建标题元素
@@ -816,28 +887,73 @@ export const TEMPLATE = `<!DOCTYPE html>
 
         function handleDragEnter(e) {
             if (this !== draggedItem) {
-                this.classList.add('drag-over');
+                // 如果拖拽到组标题上，高亮整个组
+                const groupHeader = this.closest('.group-header');
+                if (groupHeader) {
+                    const groupContainer = groupHeader.parentElement;
+                    groupContainer.classList.add('drag-over');
+                } else {
+                    this.classList.add('drag-over');
+                }
             }
         }
 
         function handleDragLeave(e) {
-            this.classList.remove('drag-over');
+            // 如果是从组标题上离开，移除组的高亮
+            const groupHeader = this.closest('.group-header');
+            if (groupHeader) {
+                const groupContainer = groupHeader.parentElement;
+                groupContainer.classList.remove('drag-over');
+            } else {
+                this.classList.remove('drag-over');
+            }
         }
 
         function handleDrop(e) {
             e.stopPropagation();
-            this.classList.remove('drag-over');
-
+            
+            // 移除所有高亮
+            const dragOvers = document.querySelectorAll('.drag-over');
+            dragOvers.forEach(item => item.classList.remove('drag-over'));
+            
             if (draggedItem !== this) {
-                const list = document.getElementById('references-list');
-                const allItems = Array.from(list.querySelectorAll('.reference-item, .reference-group'));
-                
-                // 计算新顺序（仅对未分组的引用项进行排序）
-                const ungroupedItems = Array.from(list.querySelectorAll('.reference-item'))
-                    .filter(item => !item.closest('.reference-group')); // 排除属于分组的元素
-                const newOrder = ungroupedItems.map(item => item.dataset.id);
-                
-                vscode.postMessage({ command: 'updateOrder', order: newOrder });
+                // 检查是否拖拽到了组标题上
+                const groupHeader = this.closest('.group-header');
+                if (groupHeader) {
+                    // 拖拽到组标题，将引用项添加到该组
+                    const groupId = groupHeader.parentElement.dataset.id;
+                    const referenceId = draggedItem.dataset.id;
+                    vscode.postMessage({ 
+                        command: 'updateReferenceGroup', 
+                        id: referenceId, 
+                        groupId: groupId 
+                    });
+                } else if (this.classList.contains('reference-group')) {
+                    // 拖拽到组容器上，将引用项添加到该组
+                    const groupId = this.dataset.id;
+                    const referenceId = draggedItem.dataset.id;
+                    vscode.postMessage({ 
+                        command: 'updateReferenceGroup', 
+                        id: referenceId, 
+                        groupId: groupId 
+                    });
+                } else if (this.classList.contains('reference-item')) {
+                    // 拖拽到未分组的引用项上，保持未分组状态，只调整顺序
+                    const list = document.getElementById('references-list');
+                    const ungroupedItems = Array.from(list.querySelectorAll('.reference-item'))
+                        .filter(item => !item.closest('.reference-group')); // 排除属于分组的元素
+                    const newOrder = ungroupedItems.map(item => item.dataset.id);
+                    
+                    vscode.postMessage({ command: 'updateOrder', order: newOrder });
+                } else {
+                    // 拖拽到空白区域，取消引用项的分组
+                    const referenceId = draggedItem.dataset.id;
+                    vscode.postMessage({ 
+                        command: 'updateReferenceGroup', 
+                        id: referenceId, 
+                        groupId: null 
+                    });
+                }
             }
 
             return false;

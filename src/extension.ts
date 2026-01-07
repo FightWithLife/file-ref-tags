@@ -930,6 +930,31 @@ export function activate(context: vscode.ExtensionContext) {
 
 	context.subscriptions.push(addCommentDisposable);
 
+	// 注册添加分组命令
+	const addGroupDisposable = vscode.commands.registerCommand('file-ref-tags.addGroup', async () => {
+		// 显示输入框，让用户输入分组名称
+		const groupName = await vscode.window.showInputBox({
+			prompt: '请输入分组名称',
+			placeHolder: '例如：API相关',
+			validateInput: (value) => {
+				if (!value || value.trim().length === 0) {
+					return '分组名称不能为空';
+				}
+				return null;
+			}
+		});
+
+		if (groupName) {
+			// 创建分组
+			dataManager.addGroup(groupName.trim());
+			// 通知webview更新
+			webviewViewProvider.notifyUpdate();
+			vscode.window.showInformationMessage('已添加新分组');
+		}
+	});
+
+	context.subscriptions.push(addGroupDisposable);
+
 	// 辅助函数：生成 vscode:// 链接
 	const generateVscodeLink = (filePath?: string, snippet?: string): string => {
 		const scheme = vscode.env.uriScheme || 'vscode';
