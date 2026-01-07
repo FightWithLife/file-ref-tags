@@ -37,6 +37,38 @@ export const TEMPLATE = `<!DOCTYPE html>
             padding: 0;
             margin: 0;
         }
+        .reference-group {
+            margin-bottom: 12px;
+            border: 1px solid var(--vscode-panel-border, #3e3e42);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .group-header {
+            padding: 6px 8px;
+            background-color: var(--vscode-sideBar-background, #38383d);
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            user-select: none;
+        }
+        .group-title {
+            font-weight: 500;
+            color: var(--vscode-sideBarTitle-foreground, #e0e0e0);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .group-actions {
+            display: flex;
+            gap: 4px;
+        }
+        .group-content {
+            padding: 4px 0;
+        }
+        .group-items {
+            padding-left: 8px;
+        }
         .reference-item {
             outline: 2px solid var(--vscode-panel-border, #3e3e42);
             padding: 0 6px;
@@ -86,8 +118,31 @@ export const TEMPLATE = `<!DOCTYPE html>
             color: var(--vscode-editor-foreground, #d4d4d4);
         }
         .reference-item:hover .reference-title {
-            margin-right: 50px;
+            margin-right: 80px;
             color: var(--vscode-list-hoverForeground, #cccccc);
+        }
+        .reference-type {
+            font-size: 11px;
+            padding: 1px 4px;
+            border-radius: 2px;
+            margin-left: 8px;
+            text-transform: uppercase;
+        }
+        .reference-type[data-type="file"] {
+            background-color: rgba(14, 99, 156, 0.4);
+            color: #99ddff;
+        }
+        .reference-type[data-type="file-snippet"] {
+            background-color: rgba(180, 40, 80, 0.4);
+            color: #f6b6c7;
+        }
+        .reference-type[data-type="global-snippet"] {
+            background-color: rgba(74, 22, 140, 0.4);
+            color: #cfa1f0;
+        }
+        .reference-type[data-type="comment"] {
+            background-color: rgba(0, 125, 74, 0.4);
+            color: #77e0b0;
         }
         .reference-actions {
             position: absolute;
@@ -130,6 +185,19 @@ export const TEMPLATE = `<!DOCTYPE html>
         }
         .delete-btn:hover {
             color: var(--vscode-errorForeground, #f48771);
+            background-color: var(--vscode-list-hoverBackground, #2a2d2e);
+        }
+        .ungroup-btn {
+            background: none;
+            border: none;
+            color: var(--vscode-descriptionForeground, #858585);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+        .ungroup-btn:hover {
+            color: var(--vscode-textLink-foreground, #3794ff);
             background-color: var(--vscode-list-hoverBackground, #2a2d2e);
         }
         /* 弹窗样式 */
@@ -199,6 +267,16 @@ export const TEMPLATE = `<!DOCTYPE html>
             outline: none;
             border-color: var(--vscode-input-focusBorder, #0e639c);
         }
+        .form-select {
+            width: 100%;
+            padding: 6px 8px;
+            border: 1px solid var(--vscode-input-border, #3e3e42);
+            border-radius: 3px;
+            background-color: var(--vscode-input-background, #3c3c3c);
+            color: var(--vscode-input-foreground, #cccccc);
+            font-size: 12px;
+            box-sizing: border-box;
+        }
         .modal-footer {
             display: flex;
             justify-content: flex-end;
@@ -243,6 +321,18 @@ export const TEMPLATE = `<!DOCTYPE html>
         .action-btn:hover {
             background-color: var(--vscode-button-hoverBackground, #1177bb);
         }
+        .add-group-btn {
+            background-color: var(--vscode-button-secondaryBackground, #3e3e42);
+            color: var(--vscode-button-secondaryForeground, #cccccc);
+            border: none;
+            padding: 6px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            width: 100%;
+        }
+        .add-group-btn:hover {
+            background-color: var(--vscode-button-secondaryHoverBackground, #454545);
+        }
     </style>
 </head>
 <body>
@@ -253,6 +343,7 @@ export const TEMPLATE = `<!DOCTYPE html>
         </div>
         <ul id="references-list" class="references-list"></ul>
         <div class="actions-bar">
+            <button id="add-group-btn" class="add-group-btn">Add Group</button>
             <button id="show-storage-btn" class="action-btn">Show Storage Location</button>
         </div>
     </div>
@@ -275,11 +366,51 @@ export const TEMPLATE = `<!DOCTYPE html>
         </div>
     </div>
 
+    <!-- 分组弹窗 -->
+    <div id="group-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">移动到分组</h3>
+                <button class="close-btn" id="close-group-modal">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="group-select">选择分组</label>
+                <select class="form-select" id="group-select">
+                    <option value="">无分组</option>
+                </select>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-group-btn">取消</button>
+                <button class="btn btn-primary" id="move-group-btn">移动</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 添加分组弹窗 -->
+    <div id="add-group-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">添加分组</h3>
+                <button class="close-btn" id="close-add-group-modal">&times;</button>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="group-name-input">分组名称</label>
+                <input type="text" class="form-input" id="group-name-input" placeholder="输入分组名称...">
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-add-group-btn">取消</button>
+                <button class="btn btn-primary" id="create-group-btn">创建</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const vscode = acquireVsCodeApi();
         let references = [];
+        let groups = [];
         let draggedItem = null;
         let currentEditingId = null;
+        let currentGroupId = null; // 当前正在移动的引用项ID
 
         // 初始化
         vscode.postMessage({ command: 'getReferences' });
@@ -292,32 +423,98 @@ export const TEMPLATE = `<!DOCTYPE html>
             });
         }
 
+        // 添加分组按钮事件
+        const addGroupBtn = document.getElementById('add-group-btn');
+        if (addGroupBtn) {
+            addGroupBtn.addEventListener('click', () => {
+                document.getElementById('group-name-input').value = '';
+                document.getElementById('add-group-modal').style.display = 'block';
+            });
+        }
+
         // 初始化弹窗事件
-        const modal = document.getElementById('edit-modal');
+        const editModal = document.getElementById('edit-modal');
         const closeModal = document.getElementById('close-modal');
         const cancelBtn = document.getElementById('cancel-btn');
         const saveBtn = document.getElementById('save-btn');
         const titleInput = document.getElementById('title-input');
 
-        // 关闭弹窗
-        function hideModal() {
-            modal.style.display = 'none';
+        // 分组弹窗相关元素
+        const groupModal = document.getElementById('group-modal');
+        const closeGroupModal = document.getElementById('close-group-modal');
+        const cancelGroupBtn = document.getElementById('cancel-group-btn');
+        const moveGroupBtn = document.getElementById('move-group-btn');
+        const groupSelect = document.getElementById('group-select');
+
+        // 添加分组弹窗相关元素
+        const addGroupModal = document.getElementById('add-group-modal');
+        const closeAddGroupModal = document.getElementById('close-add-group-modal');
+        const cancelAddGroupBtn = document.getElementById('cancel-add-group-btn');
+        const createGroupBtn = document.getElementById('create-group-btn');
+        const groupNameInput = document.getElementById('group-name-input');
+
+        // 关闭编辑弹窗
+        function hideEditModal() {
+            editModal.style.display = 'none';
             currentEditingId = null;
             titleInput.value = '';
         }
 
-        // 显示弹窗
-        function showModal(id, currentTitle) {
+        // 显示编辑弹窗
+        function showEditModal(id, currentTitle) {
             currentEditingId = id;
             titleInput.value = currentTitle;
-            modal.style.display = 'block';
+            editModal.style.display = 'block';
             titleInput.focus();
             titleInput.select();
         }
 
+        // 关闭分组弹窗
+        function hideGroupModal() {
+            groupModal.style.display = 'none';
+            currentGroupId = null;
+        }
+
+        // 显示分组弹窗
+        function showGroupModal(id) {
+            currentGroupId = id;
+            
+            // 更新分组选项
+            updateGroupOptions();
+            
+            groupModal.style.display = 'block';
+        }
+
+        // 更新分组选项
+        function updateGroupOptions() {
+            // 清空现有选项（保留"无分组"选项）
+            groupSelect.innerHTML = '<option value="">无分组</option>';
+            
+            // 添加所有分组选项
+            groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.textContent = group.name;
+                groupSelect.appendChild(option);
+            });
+        }
+
+        // 关闭添加分组弹窗
+        function hideAddGroupModal() {
+            addGroupModal.style.display = 'none';
+            groupNameInput.value = '';
+        }
+
+        // 显示添加分组弹窗
+        function showAddGroupModal() {
+            groupNameInput.value = '';
+            addGroupModal.style.display = 'block';
+            groupNameInput.focus();
+        }
+
         // 弹窗事件监听
-        closeModal.addEventListener('click', hideModal);
-        cancelBtn.addEventListener('click', hideModal);
+        closeModal.addEventListener('click', hideEditModal);
+        cancelBtn.addEventListener('click', hideEditModal);
         saveBtn.addEventListener('click', () => {
             if (currentEditingId) {
                 const newTitle = titleInput.value.trim();
@@ -327,15 +524,50 @@ export const TEMPLATE = `<!DOCTYPE html>
                         id: currentEditingId, 
                         title: newTitle 
                     });
-                    hideModal();
+                    hideEditModal();
                 }
+            }
+        });
+
+        // 分组弹窗事件监听
+        closeGroupModal.addEventListener('click', hideGroupModal);
+        cancelGroupBtn.addEventListener('click', hideGroupModal);
+        moveGroupBtn.addEventListener('click', () => {
+            if (currentGroupId) {
+                const selectedGroupId = groupSelect.value;
+                vscode.postMessage({ 
+                    command: 'updateReferenceGroup', 
+                    id: currentGroupId, 
+                    groupId: selectedGroupId || null
+                });
+                hideGroupModal();
+            }
+        });
+
+        // 添加分组弹窗事件监听
+        closeAddGroupModal.addEventListener('click', hideAddGroupModal);
+        cancelAddGroupBtn.addEventListener('click', hideAddGroupModal);
+        createGroupBtn.addEventListener('click', () => {
+            const groupName = groupNameInput.value.trim();
+            if (groupName) {
+                vscode.postMessage({ 
+                    command: 'addGroup', 
+                    name: groupName 
+                });
+                hideAddGroupModal();
             }
         });
 
         // 点击弹窗外部关闭
         window.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                hideModal();
+            if (e.target === editModal) {
+                hideEditModal();
+            }
+            if (e.target === groupModal) {
+                hideGroupModal();
+            }
+            if (e.target === addGroupModal) {
+                hideAddGroupModal();
             }
         });
 
@@ -344,7 +576,15 @@ export const TEMPLATE = `<!DOCTYPE html>
             if (e.key === 'Enter') {
                 saveBtn.click();
             } else if (e.key === 'Escape') {
-                hideModal();
+                hideEditModal();
+            }
+        });
+
+        groupNameInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                createGroupBtn.click();
+            } else if (e.key === 'Escape') {
+                hideAddGroupModal();
             }
         });
 
@@ -353,7 +593,8 @@ export const TEMPLATE = `<!DOCTYPE html>
             const message = event.data;
             switch (message.command) {
                 case 'updateReferences':
-                    references = message.references;
+                    references = message.references || [];
+                    groups = message.groups || [];
                     renderReferences();
                     break;
             }
@@ -364,7 +605,7 @@ export const TEMPLATE = `<!DOCTYPE html>
             const list = document.getElementById('references-list');
             const emptyState = document.getElementById('empty-state');
 
-            if (references.length === 0) {
+            if (references.length === 0 && groups.length === 0) {
                 list.style.display = 'none';
                 emptyState.style.display = 'block';
                 return;
@@ -375,62 +616,186 @@ export const TEMPLATE = `<!DOCTYPE html>
 
             list.innerHTML = '';
 
-            references.forEach(reference => {
-                const li = document.createElement('li');
-                li.className = 'reference-item';
-                li.draggable = true;
-                li.dataset.id = reference.id;
-                li.dataset.type = reference.type;
+            // 首先渲染有分组的引用项
+            const groupedReferences = {};
+            const ungroupedReferences = [];
 
-                // 设置拖拽事件
-                li.addEventListener('dragstart', handleDragStart);
-                li.addEventListener('dragover', handleDragOver);
-                li.addEventListener('dragenter', handleDragEnter);
-                li.addEventListener('dragleave', handleDragLeave);
-                li.addEventListener('drop', handleDrop);
-                li.addEventListener('dragend', handleDragEnd);
-
-                // 点击跳转
-                li.addEventListener('click', (e) => {
-                    if (!e.target.classList.contains('delete-btn') && !e.target.classList.contains('edit-btn')) {
-                        vscode.postMessage({ command: 'jumpToReference', id: reference.id });
+            references.forEach(ref => {
+                if (ref.groupId) {
+                    if (!groupedReferences[ref.groupId]) {
+                        groupedReferences[ref.groupId] = [];
                     }
-                });
-
-                // 使用DOM API创建元素，避免模板字面量语法错误
-                const titleH3 = document.createElement('h3');
-                titleH3.className = 'reference-title';
-                titleH3.textContent = reference.title;
-
-                // 创建操作栏
-                const actionsDiv = document.createElement('div');
-                actionsDiv.className = 'reference-actions';
-
-                // 编辑按钮
-                const editBtn = document.createElement('button');
-                editBtn.className = 'edit-btn';
-                editBtn.textContent = '编辑';
-                editBtn.onclick = function() {
-                    showModal(reference.id, reference.title);
-                };
-
-                // 删除按钮
-                const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'delete-btn';
-                deleteBtn.textContent = '×';
-                deleteBtn.onclick = function() {
-                    vscode.postMessage({ command: 'deleteReference', id: reference.id });
-                };
-
-                // 组装元素
-                actionsDiv.appendChild(editBtn);
-                actionsDiv.appendChild(deleteBtn);
-                
-                li.appendChild(titleH3);
-                li.appendChild(actionsDiv);
-
-                list.appendChild(li);
+                    groupedReferences[ref.groupId].push(ref);
+                } else {
+                    ungroupedReferences.push(ref);
+                }
             });
+
+            // 渲染分组
+            groups.forEach(group => {
+                if (groupedReferences[group.id] && groupedReferences[group.id].length > 0) {
+                    const groupLi = document.createElement('li');
+                    groupLi.className = 'reference-group';
+
+                    const groupHeader = document.createElement('div');
+                    groupHeader.className = 'group-header';
+
+                    const groupTitle = document.createElement('div');
+                    groupTitle.className = 'group-title';
+                    groupTitle.innerHTML = '<span>📁</span><span>' + group.name + '</span>';
+
+                    const groupActions = document.createElement('div');
+                    groupActions.className = 'group-actions';
+
+                    const deleteGroupBtn = document.createElement('button');
+                    deleteGroupBtn.className = 'delete-btn';
+                    deleteGroupBtn.textContent = '×';
+                    deleteGroupBtn.onclick = function(e) {
+                        e.stopPropagation();
+                        if (confirm('确定要删除这个分组吗？分组内的引用项将变为未分组状态。')) {
+                            vscode.postMessage({ command: 'deleteGroup', id: group.id });
+                        }
+                    };
+
+                    groupActions.appendChild(deleteGroupBtn);
+                    groupHeader.appendChild(groupTitle);
+                    groupHeader.appendChild(groupActions);
+                    groupLi.appendChild(groupHeader);
+
+                    const groupContent = document.createElement('div');
+                    groupContent.className = 'group-content';
+
+                    const groupItemsUl = document.createElement('ul');
+                    groupItemsUl.className = 'group-items';
+
+                    groupedReferences[group.id].forEach(reference => {
+                        groupItemsUl.appendChild(createReferenceElement(reference));
+                    });
+
+                    groupContent.appendChild(groupItemsUl);
+                    groupLi.appendChild(groupContent);
+                    list.appendChild(groupLi);
+                }
+            });
+
+            // 渲染未分组的引用项
+            if (ungroupedReferences.length > 0) {
+                ungroupedReferences.forEach(reference => {
+                    list.appendChild(createReferenceElement(reference));
+                });
+            }
+        }
+
+        // 创建引用项元素
+        function createReferenceElement(reference) {
+            const li = document.createElement('li');
+            li.className = 'reference-item';
+            li.draggable = true;
+            li.dataset.id = reference.id;
+            li.dataset.type = reference.type;
+
+            // 设置拖拽事件
+            li.addEventListener('dragstart', handleDragStart);
+            li.addEventListener('dragover', handleDragOver);
+            li.addEventListener('dragenter', handleDragEnter);
+            li.addEventListener('dragleave', handleDragLeave);
+            li.addEventListener('drop', handleDrop);
+            li.addEventListener('dragend', handleDragEnd);
+
+            // 点击跳转
+            li.addEventListener('click', (e) => {
+                if (!e.target.classList.contains('delete-btn') && 
+                    !e.target.classList.contains('edit-btn') && 
+                    !e.target.classList.contains('ungroup-btn')) {
+                    vscode.postMessage({ command: 'jumpToReference', id: reference.id });
+                }
+            });
+
+            // 创建标题元素
+            const titleH3 = document.createElement('h3');
+            titleH3.className = 'reference-title';
+            
+            // 添加类型标识
+            const typeSpan = document.createElement('span');
+            typeSpan.className = 'reference-type';
+            typeSpan.dataset.type = reference.type;
+            
+            // 根据类型设置显示文本
+            switch(reference.type) {
+                case 'file':
+                    typeSpan.textContent = '文件';
+                    break;
+                case 'file-snippet':
+                    typeSpan.textContent = '片段';
+                    break;
+                case 'global-snippet':
+                    typeSpan.textContent = '全局';
+                    break;
+                case 'comment':
+                    typeSpan.textContent = '注释';
+                    break;
+            }
+            
+            titleH3.textContent = reference.title;
+            titleH3.appendChild(typeSpan);
+
+            // 创建操作栏
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'reference-actions';
+
+            // 分组按钮
+            const groupBtn = document.createElement('button');
+            groupBtn.className = 'edit-btn';
+            groupBtn.textContent = '分组';
+            groupBtn.onclick = function(e) {
+                e.stopPropagation();
+                showGroupModal(reference.id);
+            };
+
+            // 编辑按钮
+            const editBtn = document.createElement('button');
+            editBtn.className = 'edit-btn';
+            editBtn.textContent = '编辑';
+            editBtn.onclick = function(e) {
+                e.stopPropagation();
+                showEditModal(reference.id, reference.title);
+            };
+
+            // 如果引用项有分组，添加取消分组按钮
+            if (reference.groupId) {
+                const ungroupBtn = document.createElement('button');
+                ungroupBtn.className = 'ungroup-btn';
+                ungroupBtn.textContent = '取消分组';
+                ungroupBtn.onclick = function(e) {
+                    e.stopPropagation();
+                    vscode.postMessage({ 
+                        command: 'updateReferenceGroup', 
+                        id: reference.id, 
+                        groupId: null 
+                    });
+                };
+                
+                actionsDiv.appendChild(ungroupBtn);
+            }
+
+            // 删除按钮
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '×';
+            deleteBtn.onclick = function(e) {
+                e.stopPropagation();
+                vscode.postMessage({ command: 'deleteReference', id: reference.id });
+            };
+
+            // 组装元素
+            actionsDiv.appendChild(groupBtn);
+            actionsDiv.appendChild(editBtn);
+            actionsDiv.appendChild(deleteBtn);
+            
+            li.appendChild(titleH3);
+            li.appendChild(actionsDiv);
+
+            return li;
         }
 
         // 删除引用
@@ -464,18 +829,14 @@ export const TEMPLATE = `<!DOCTYPE html>
             this.classList.remove('drag-over');
 
             if (draggedItem !== this) {
-                const list = this.parentNode;
-                const draggedIndex = Array.from(list.children).indexOf(draggedItem);
-                const dropIndex = Array.from(list.children).indexOf(this);
-
-                if (draggedIndex < dropIndex) {
-                    list.insertBefore(draggedItem, this.nextSibling);
-                } else {
-                    list.insertBefore(draggedItem, this);
-                }
-
-                // 更新顺序
-                const newOrder = Array.from(list.children).map(item => item.dataset.id);
+                const list = document.getElementById('references-list');
+                const allItems = Array.from(list.querySelectorAll('.reference-item, .reference-group'));
+                
+                // 计算新顺序（仅对未分组的引用项进行排序）
+                const ungroupedItems = Array.from(list.querySelectorAll('.reference-item'))
+                    .filter(item => !item.closest('.reference-group')); // 排除属于分组的元素
+                const newOrder = ungroupedItems.map(item => item.dataset.id);
+                
                 vscode.postMessage({ command: 'updateOrder', order: newOrder });
             }
 
@@ -486,8 +847,11 @@ export const TEMPLATE = `<!DOCTYPE html>
             this.classList.remove('dragging');
             draggedItem = null;
             // 移除所有drag-over类
-            Array.from(this.parentNode.children).forEach(item => {
-                item.classList.remove('drag-over');
+            const list = document.getElementById('references-list');
+            Array.from(list.children).forEach(item => {
+                if (item.classList.contains('drag-over')) {
+                    item.classList.remove('drag-over');
+                }
             });
         }
     </script>

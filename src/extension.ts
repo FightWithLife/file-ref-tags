@@ -4,11 +4,12 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { TEMPLATE } from './view/template';
-import { ReferenceItem } from './types/referenct';
+import { ReferenceItem, ReferenceGroup } from './types/referenct';
 
 // 数据管理类
 class ReferenceDataManager {
 	private references: ReferenceItem[] = [];
+	private groups: ReferenceGroup[] = []; // 新增：标签组数组
 	private storagePath: string;
 
 	constructor(context: vscode.ExtensionContext) {
@@ -29,18 +30,34 @@ class ReferenceDataManager {
 		try {
 			if (fs.existsSync(this.storagePath)) {
 				const data = fs.readFileSync(this.storagePath, 'utf8');
-				this.references = JSON.parse(data);
+				const parsedData = JSON.parse(data);
+				
+				// 如果解析的数据包含groups字段，则同时加载引用和分组
+				if (Array.isArray(parsedData.references) && Array.isArray(parsedData.groups)) {
+					this.references = parsedData.references;
+					this.groups = parsedData.groups;
+				} else {
+					// 向后兼容：如果数据格式是旧的数组格式
+					this.references = Array.isArray(parsedData) ? parsedData : [];
+					this.groups = [];
+				}
 			}
 		} catch (error) {
 			console.error('Failed to load references:', error);
 			this.references = [];
+			this.groups = [];
 		}
 	}
 
 	// 保存引用数据
 	private saveReferences(): void {
 		try {
-			fs.writeFileSync(this.storagePath, JSON.stringify(this.references, null, 2), 'utf8');
+			// 保存引用和分组数据
+			const dataToSave = {
+				references: this.references,
+				groups: this.groups
+			};
+			fs.writeFileSync(this.storagePath, JSON.stringify(dataToSave, null, 2), 'utf8');
 		} catch (error) {
 			console.error('Failed to save references:', error);
 		}
@@ -60,9 +77,28 @@ class ReferenceDataManager {
 		return newReference;
 	}
 
+	// 添加标签组
+	addGroup(name: string): ReferenceGroup {
+		const now = new Date().toISOString();
+		const newGroup: ReferenceGroup = {
+			id: `group-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+			name: name,
+			createdAt: now,
+			updatedAt: now
+		};
+		this.groups.push(newGroup);
+		this.saveReferences();
+		return newGroup;
+	}
+
 	// 获取所有引用项
 	getReferences(): ReferenceItem[] {
 		return [...this.references];
+	}
+
+	// 获取所有标签组
+	getGroups(): ReferenceGroup[] {
+		return [...this.groups];
 	}
 
 	// 更新引用项顺序
@@ -90,6 +126,22 @@ class ReferenceDataManager {
 		this.saveReferences();
 	}
 
+	// 删除标签组
+	deleteGroup(id: string): void {
+		// 删除组和组内所有引用项
+		this.groups = this.groups.filter(g => g.id !== id);
+		// 移除引用项中对已删除组的引用
+		this.references = this.references.map(ref => {
+			if (ref.groupId === id) {
+				const updatedRef = { ...ref };
+				delete updatedRef.groupId;
+				return updatedRef;
+			}
+			return ref;
+		});
+		this.saveReferences();
+	}
+
 	// 更新引用项标题
 	updateReferenceTitle(id: string, title: string): void {
 		const reference = this.references.find(r => r.id === id);
@@ -105,6 +157,20 @@ class ReferenceDataManager {
 		const reference = this.references.find(r => r.id === id);
 		if (reference) {
 			reference.targetFilePath = targetFilePath;
+			reference.updatedAt = new Date().toISOString();
+			this.saveReferences();
+		}
+	}
+
+	// 更新引用项的标签组
+	updateReferenceGroup(id: string, groupId: string | null): void {
+		const reference = this.references.find(r => r.id === id);
+		if (reference) {
+			if (groupId) {
+				reference.groupId = groupId;
+			} else {
+				delete reference.groupId;
+			}
 			reference.updatedAt = new Date().toISOString();
 			this.saveReferences();
 		}
@@ -167,6 +233,17 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 						this._dataManager.updateReferenceTitle(message.id, message.title);
 						this._sendReferences();
 						return;
+					case 'addGroup':
+						this._addGroup(message.name);
+						return;
+					case 'deleteGroup':
+						this._dataManager.deleteGroup(message.id);
+						this._sendReferences();
+						return;
+					case 'updateReferenceGroup':
+						this._dataManager.updateReferenceGroup(message.id, message.groupId);
+						this._sendReferences();
+						return;
 				}
 			},
 			undefined,
@@ -206,9 +283,16 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 		if (this._webviewView) {
 			this._webviewView.webview.postMessage({
 				command: 'updateReferences',
-				references: this._dataManager.getReferences()
+				references: this._dataManager.getReferences(),
+				groups: this._dataManager.getGroups()
 			});
 		}
+	}
+
+	// 添加标签组
+	private _addGroup(name: string): void {
+		this._dataManager.addGroup(name);
+		this._sendReferences();
 	}
 
 	// 跳转到引用位置
