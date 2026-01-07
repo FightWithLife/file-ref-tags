@@ -122,13 +122,6 @@ export const TEMPLATE = `<!DOCTYPE html>
             outline-color: var(--vscode-input-focusBorder, #0e639c);
             transform: translateX(2px);
         }
-        .reference-item.dragging {
-            opacity: 0.7;
-            outline: 1px dashed var(--vscode-input-focusBorder, #0e639c);
-        }
-        .reference-item.drag-over {
-            border-top: 1px solid var(--vscode-input-focusBorder, #0e639c);
-        }
         .reference-title {
             font-size: 12px;
             font-weight: 400;
@@ -439,7 +432,6 @@ export const TEMPLATE = `<!DOCTYPE html>
         const vscode = acquireVsCodeApi();
         let references = [];
         let groups = [];
-        let draggedItem = null;
         let currentEditingId = null;
         let currentGroupId = null; // 当前正在移动的引用项ID
         let expandedGroups = {}; // 记录展开/折叠状态
@@ -767,17 +759,8 @@ export const TEMPLATE = `<!DOCTYPE html>
         function createReferenceElement(reference) {
             const li = document.createElement('li');
             li.className = 'reference-item';
-            li.draggable = true;
             li.dataset.id = reference.id;
             li.dataset.type = reference.type;
-
-            // 设置拖拽事件
-            li.addEventListener('dragstart', handleDragStart);
-            li.addEventListener('dragover', handleDragOver);
-            li.addEventListener('dragenter', handleDragEnter);
-            li.addEventListener('dragleave', handleDragLeave);
-            li.addEventListener('drop', handleDrop);
-            li.addEventListener('dragend', handleDragEnd);
 
             // 点击跳转
             li.addEventListener('click', (e) => {
@@ -884,103 +867,6 @@ export const TEMPLATE = `<!DOCTYPE html>
         // 删除引用
         function deleteReference(id) {
             vscode.postMessage({ command: 'deleteReference', id });
-        }
-
-        // 拖拽事件处理
-        function handleDragStart(e) {
-            draggedItem = this;
-            this.classList.add('dragging');
-        }
-
-        function handleDragOver(e) {
-            e.preventDefault();
-            return false;
-        }
-
-        function handleDragEnter(e) {
-            if (this !== draggedItem) {
-                // 如果拖拽到组标题上，高亮整个组
-                const groupHeader = this.closest('.group-header');
-                if (groupHeader) {
-                    const groupContainer = groupHeader.parentElement;
-                    groupContainer.classList.add('drag-over');
-                } else {
-                    this.classList.add('drag-over');
-                }
-            }
-        }
-
-        function handleDragLeave(e) {
-            // 如果是从组标题上离开，移除组的高亮
-            const groupHeader = this.closest('.group-header');
-            if (groupHeader) {
-                const groupContainer = groupHeader.parentElement;
-                groupContainer.classList.remove('drag-over');
-            } else {
-                this.classList.remove('drag-over');
-            }
-        }
-
-        function handleDrop(e) {
-            e.stopPropagation();
-            
-            // 移除所有高亮
-            const dragOvers = document.querySelectorAll('.drag-over');
-            dragOvers.forEach(item => item.classList.remove('drag-over'));
-            
-            if (draggedItem !== this) {
-                // 检查是否拖拽到了组标题上
-                const groupHeader = this.closest('.group-header');
-                if (groupHeader) {
-                    // 拖拽到组标题，将引用项添加到该组
-                    const groupId = groupHeader.parentElement.dataset.id;
-                    const referenceId = draggedItem.dataset.id;
-                    vscode.postMessage({ 
-                        command: 'updateReferenceGroup', 
-                        id: referenceId, 
-                        groupId: groupId 
-                    });
-                } else if (this.classList.contains('reference-group')) {
-                    // 拖拽到组容器上，将引用项添加到该组
-                    const groupId = this.dataset.id;
-                    const referenceId = draggedItem.dataset.id;
-                    vscode.postMessage({ 
-                        command: 'updateReferenceGroup', 
-                        id: referenceId, 
-                        groupId: groupId 
-                    });
-                } else if (this.classList.contains('reference-item')) {
-                    // 拖拽到未分组的引用项上，保持未分组状态，只调整顺序
-                    const list = document.getElementById('references-list');
-                    const ungroupedItems = Array.from(list.querySelectorAll('.reference-item'))
-                        .filter(item => !item.closest('.reference-group')); // 排除属于分组的元素
-                    const newOrder = ungroupedItems.map(item => item.dataset.id);
-                    
-                    vscode.postMessage({ command: 'updateOrder', order: newOrder });
-                } else {
-                    // 拖拽到空白区域，取消引用项的分组
-                    const referenceId = draggedItem.dataset.id;
-                    vscode.postMessage({ 
-                        command: 'updateReferenceGroup', 
-                        id: referenceId, 
-                        groupId: null 
-                    });
-                }
-            }
-
-            return false;
-        }
-
-        function handleDragEnd(e) {
-            this.classList.remove('dragging');
-            draggedItem = null;
-            // 移除所有drag-over类
-            const list = document.getElementById('references-list');
-            Array.from(list.children).forEach(item => {
-                if (item.classList.contains('drag-over')) {
-                    item.classList.remove('drag-over');
-                }
-            });
         }
     </script>
 </body>
