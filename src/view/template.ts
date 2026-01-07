@@ -367,6 +367,14 @@ export const TEMPLATE = `<!DOCTYPE html>
         .reference-item.dragging {
             opacity: 0.5;
         }
+        
+        /* 排序拖拽指示线 */
+        .sort-drag-line {
+            height: 2px;
+            background-color: var(--vscode-input-focusBorder, #0e639c);
+            margin: 2px 0;
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -662,6 +670,9 @@ export const TEMPLATE = `<!DOCTYPE html>
                 const groupLi = document.createElement('li');
                 groupLi.className = 'reference-group';
                 groupLi.dataset.id = group.id;
+                groupLi.draggable = true;
+                groupLi.addEventListener('dragstart', handleGroupDragStart);
+                groupLi.addEventListener('dragend', handleGroupDragEnd);
 
                 const groupHeader = document.createElement('div');
                 groupHeader.className = 'group-header expanded'; // 默认展开
@@ -888,17 +899,38 @@ export const TEMPLATE = `<!DOCTYPE html>
             return li;
         }
 
-        // 拖拽开始处理
+        // 拖拽开始处理（引用项）
         function handleDragStart(e) {
             e.dataTransfer.setData('text/x-reference-item', this.dataset.id);
             e.dataTransfer.effectAllowed = 'move';
             this.classList.add('dragging');
         }
 
-        // 拖拽结束处理
+        // 拖拽结束处理（引用项）
         function handleDragEnd(e) {
             document.querySelectorAll('.drag-over').forEach(el => {
                 el.classList.remove('drag-over');
+            });
+            document.querySelectorAll('.sort-drag-line').forEach(el => {
+                el.remove();
+            });
+            e.target.classList.remove('dragging');
+        }
+
+        // 拖拽开始处理（分组）
+        function handleGroupDragStart(e) {
+            e.dataTransfer.setData('text/x-group', this.dataset.id);
+            e.dataTransfer.effectAllowed = 'move';
+            this.classList.add('dragging');
+        }
+
+        // 拖拽结束处理（分组）
+        function handleGroupDragEnd(e) {
+            document.querySelectorAll('.drag-over').forEach(el => {
+                el.classList.remove('drag-over');
+            });
+            document.querySelectorAll('.sort-drag-line').forEach(el => {
+                el.remove();
             });
             e.target.classList.remove('dragging');
         }
@@ -906,12 +938,82 @@ export const TEMPLATE = `<!DOCTYPE html>
         // 拖拽经过处理
         function handleDragOver(e) {
             e.preventDefault();
+            
+            // 检查是否是引用项拖拽（排序）
+            if (e.dataTransfer.types.includes('text/x-reference-item')) {
+                const draggedElementId = e.dataTransfer.getData('text/x-reference-item');
+                const targetElement = e.target.closest('.reference-item');
+                
+                // 如果目标元素是引用项，但不是被拖拽的元素本身
+                if (targetElement && targetElement.dataset.id !== draggedElementId) {
+                    // 添加排序指示线
+                    addSortIndicator(targetElement, e.clientY);
+                }
+            }
+            
+            // 检查是否是分组拖拽（排序）
+            if (e.dataTransfer.types.includes('text/x-group')) {
+                const draggedElementId = e.dataTransfer.getData('text/x-group');
+                const targetElement = e.target.closest('.reference-group');
+                
+                // 如果目标元素是分组，但不是被拖拽的元素本身
+                if (targetElement && targetElement.dataset.id !== draggedElementId) {
+                    // 添加排序指示线
+                    addGroupSortIndicator(targetElement, e.clientY);
+                }
+            }
+            
             return false;
+        }
+
+        // 添加排序指示线
+        function addSortIndicator(targetElement, clientY) {
+            // 移除现有的指示线
+            document.querySelectorAll('.sort-drag-line').forEach(el => {
+                el.remove();
+            });
+            
+            // 计算鼠标位置相对于目标元素的位置，决定线的位置
+            const rect = targetElement.getBoundingClientRect();
+            const positionRatio = (clientY - rect.top) / rect.height;
+            
+            // 如果鼠标在元素上半部分，线显示在上方；否则显示在下方
+            if (positionRatio < 0.5) {
+                targetElement.parentNode.insertBefore(createSortLine(), targetElement);
+            } else {
+                targetElement.parentNode.insertBefore(createSortLine(), targetElement.nextSibling);
+            }
+        }
+
+        // 添加分组排序指示线
+        function addGroupSortIndicator(targetElement, clientY) {
+            // 移除现有的指示线
+            document.querySelectorAll('.sort-drag-line').forEach(el => {
+                el.remove();
+            });
+            
+            // 计算鼠标位置相对于目标元素的位置，决定线的位置
+            const rect = targetElement.getBoundingClientRect();
+            const positionRatio = (clientY - rect.top) / rect.height;
+            
+            // 如果鼠标在元素上半部分，线显示在上方；否则显示在下方
+            if (positionRatio < 0.5) {
+                document.querySelector('#references-list').insertBefore(createSortLine(), targetElement);
+            } else {
+                document.querySelector('#references-list').insertBefore(createSortLine(), targetElement.nextSibling);
+            }
+        }
+
+        // 创建排序指示线元素
+        function createSortLine() {
+            const line = document.createElement('li');
+            line.className = 'sort-drag-line';
+            return line;
         }
 
         // 拖拽进入处理
         function handleDragEnter(e) {
-            if (e.dataTransfer.types.includes('text/x-reference-item')) {
+            if (e.dataTransfer.types.includes('text/x-reference-item') || e.dataTransfer.types.includes('text/x-group')) {
                 // 检查是否是分组元素
                 if (this.classList.contains('reference-group')) {
                     this.classList.add('drag-over');
@@ -931,6 +1033,7 @@ export const TEMPLATE = `<!DOCTYPE html>
             
             this.classList.remove('drag-over');
             
+            // 检查是否是引用项拖拽到分组上（分组操作）
             if (e.dataTransfer.types.includes('text/x-reference-item')) {
                 const referenceId = e.dataTransfer.getData('text/x-reference-item');
                 const groupId = this.dataset.id;
@@ -948,6 +1051,7 @@ export const TEMPLATE = `<!DOCTYPE html>
         function handleDropOnList(e) {
             e.preventDefault();
             
+            // 检查是否是引用项拖拽（分组操作）
             if (e.dataTransfer.types.includes('text/x-reference-item')) {
                 const referenceId = e.dataTransfer.getData('text/x-reference-item');
                 
@@ -958,12 +1062,134 @@ export const TEMPLATE = `<!DOCTYPE html>
                     groupId: null 
                 });
             }
+            // 检查是否是分组拖拽（排序操作）
+            else if (e.dataTransfer.types.includes('text/x-group')) {
+                const groupId = e.dataTransfer.getData('text/x-group');
+                
+                // 获取指示线元素来确定放置位置
+                const sortLine = document.querySelector('.sort-drag-line');
+                if (sortLine) {
+                    const referenceList = document.getElementById('references-list');
+                    const allGroups = Array.from(referenceList.querySelectorAll('.reference-group'));
+                    
+                    // 找到指示线的位置
+                    const index = Array.prototype.indexOf.call(referenceList.children, sortLine);
+                    
+                    // 找到目标分组应该插入的位置
+                    let targetIndex = index;
+                    // 如果指示线后面是当前分组，则需要调整索引
+                    if (index < allGroups.length && allGroups[index] && allGroups[index].dataset.id === groupId) {
+                        targetIndex = index + 1;
+                    }
+                    
+                    // 构建新的分组顺序
+                    const newGroupOrder = [];
+                    allGroups.forEach(group => {
+                        if (group.dataset.id !== groupId) {
+                            newGroupOrder.push(group.dataset.id);
+                        }
+                    });
+                    
+                    // 插入被拖拽的分组
+                    newGroupOrder.splice(targetIndex, 0, groupId);
+                    
+                    // 发送更新分组顺序的消息到主进程
+                    vscode.postMessage({ 
+                        command: 'updateGroupOrder', 
+                        order: newGroupOrder 
+                    });
+                }
+            }
+            // 检查是否是引用项拖拽（排序操作）
+            else if (e.dataTransfer.types.includes('text/x-reference-item')) {
+                const referenceId = e.dataTransfer.getData('text/x-reference-item');
+                
+                // 获取指示线元素来确定放置位置
+                const sortLine = document.querySelector('.sort-drag-line');
+                if (sortLine) {
+                    // 获取当前所有未分组的引用项
+                    const referenceList = document.getElementById('references-list');
+                    const ungroupedItems = Array.from(referenceList.querySelectorAll('.reference-item:not(.reference-group .reference-item)'));
+                    
+                    // 找到指示线的位置
+                    const index = Array.prototype.indexOf.call(referenceList.children, sortLine);
+                    
+                    // 找到目标引用项应该插入的位置
+                    let targetIndex = index;
+                    
+                    // 构建新的引用项顺序
+                    const newReferenceOrder = [];
+                    ungroupedItems.forEach(item => {
+                        if (item.dataset.id !== referenceId) {
+                            newReferenceOrder.push(item.dataset.id);
+                        }
+                    });
+                    
+                    // 插入被拖拽的引用项
+                    // 计算插入位置，需要排除非引用项元素（如指示线、分组等）
+                    let insertPosition = 0;
+                    for (let i = 0; i < index; i++) {
+                        const child = referenceList.children[i];
+                        if (child.classList.contains('reference-item') && !child.classList.contains('reference-group')) {
+                            insertPosition++;
+                        }
+                    }
+                    
+                    newReferenceOrder.splice(insertPosition, 0, referenceId);
+                    
+                    // 发送更新引用项顺序的消息到主进程
+                    vscode.postMessage({ 
+                        command: 'updateOrder', 
+                        order: newReferenceOrder 
+                    });
+                }
+            }
+            
+            // 清除指示线
+            document.querySelectorAll('.sort-drag-line').forEach(el => el.remove());
         }
 
-        // 删除引用
-        function deleteReference(id) {
-            vscode.postMessage({ command: 'deleteReference', id });
-        }
+        // 拖拽放下处理（引用项排序）
+        document.addEventListener('drop', function(e) {
+            // 检查是否是引用项拖拽（排序操作）
+            if (e.dataTransfer.types.includes('text/x-reference-item')) {
+                const referenceId = e.dataTransfer.getData('text/x-reference-item');
+                
+                // 获取指示线元素来确定放置位置
+                const sortLine = document.querySelector('.sort-drag-line');
+                if (sortLine && sortLine.parentNode.classList.contains('group-items')) {
+                    e.preventDefault();
+                    
+                    // 获取当前分组中的所有引用项
+                    const groupItemsContainer = sortLine.parentNode;
+                    const groupItems = Array.from(groupItemsContainer.querySelectorAll('.reference-item'));
+                    const groupId = groupItemsContainer.closest('.reference-group').dataset.id;
+                    
+                    // 找到指示线的位置
+                    const index = Array.prototype.indexOf.call(groupItemsContainer.children, sortLine);
+                    
+                    // 构建新的引用项顺序
+                    const newReferenceOrder = [];
+                    groupItems.forEach(item => {
+                        if (item.dataset.id !== referenceId) {
+                            newReferenceOrder.push(item.dataset.id);
+                        }
+                    });
+                    
+                    // 插入被拖拽的引用项
+                    newReferenceOrder.splice(index, 0, referenceId);
+                    
+                    // 发送更新引用项顺序的消息到主进程
+                    vscode.postMessage({ 
+                        command: 'updateOrder', 
+                        order: newReferenceOrder 
+                    });
+                    
+                    // 清除指示线
+                    document.querySelectorAll('.sort-drag-line').forEach(el => el.remove());
+                }
+            }
+        });
     </script>
 </body>
 </html>`;

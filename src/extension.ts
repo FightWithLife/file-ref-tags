@@ -120,6 +120,25 @@ class ReferenceDataManager {
 		this.saveReferences();
 	}
 
+	// 更新分组顺序
+	updateGroupOrder(newOrder: string[]): void {
+		const newGroups: ReferenceGroup[] = [];
+		newOrder.forEach(id => {
+			const group = this.groups.find(g => g.id === id);
+			if (group) {
+				newGroups.push(group);
+			}
+		});
+		// 添加未在新顺序中的分组
+		this.groups.forEach(group => {
+			if (!newOrder.includes(group.id)) {
+				newGroups.push(group);
+			}
+		});
+		this.groups = newGroups;
+		this.saveReferences();
+	}
+
 	// 删除引用项
 	deleteReference(id: string): void {
 		this.references = this.references.filter(r => r.id !== id);
@@ -217,6 +236,10 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 						return;
 					case 'updateOrder':
 						this._dataManager.updateOrder(message.order);
+						this._sendReferences();
+						return;
+					case 'updateGroupOrder':
+						this._dataManager.updateGroupOrder(message.order);
 						this._sendReferences();
 						return;
 					case 'deleteReference':
