@@ -375,6 +375,35 @@ export const TEMPLATE = `<!DOCTYPE html>
             margin: 2px 0;
             width: 100%;
         }
+        
+        /* 右键菜单样式 */
+        .context-menu {
+            position: fixed;
+            background-color: var(--vscode-editor-background, #1e1e1e);
+            border: 1px solid var(--vscode-panel-border, #3e3e42);
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            z-index: 1001;
+            min-width: 150px;
+        }
+        
+        .context-menu-item {
+            padding: 6px 12px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--vscode-editor-foreground, #d4d4d4);
+            display: flex;
+            align-items: center;
+        }
+        
+        .context-menu-item:hover {
+            background-color: var(--vscode-list-hoverBackground, #2a2d2e);
+        }
+        
+        .context-menu-item i {
+            margin-right: 8px;
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -386,6 +415,13 @@ export const TEMPLATE = `<!DOCTYPE html>
         <ul id="references-list" class="references-list"></ul>
         <div class="actions-bar">
             <button id="show-storage-btn" class="action-btn">Show Storage Location</button>
+        </div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <div id="context-menu" class="context-menu" style="display: none;">
+        <div class="context-menu-item" id="copy-uri-item">
+            <i>🔗</i>复制URI
         </div>
     </div>
 
@@ -485,6 +521,12 @@ export const TEMPLATE = `<!DOCTYPE html>
         const cancelAddGroupBtn = document.getElementById('cancel-add-group-btn');
         const createGroupBtn = document.getElementById('create-group-btn');
         const groupNameInput = document.getElementById('group-name-input');
+
+        // 右键菜单元素
+        const contextMenu = document.getElementById('context-menu');
+        const copyUriItem = document.getElementById('copy-uri-item');
+        const groupItem = document.getElementById('group-item');
+        let currentRightClickedId = null;
 
         // 关闭编辑弹窗
         function hideEditModal() {
@@ -602,6 +644,9 @@ export const TEMPLATE = `<!DOCTYPE html>
             if (e.target === addGroupModal) {
                 hideAddGroupModal();
             }
+            if (e.target !== contextMenu && !contextMenu.contains(e.target)) {
+                contextMenu.style.display = 'none';
+            }
         });
 
         // 按下Enter键保存，按下Escape键取消
@@ -618,6 +663,17 @@ export const TEMPLATE = `<!DOCTYPE html>
                 createGroupBtn.click();
             } else if (e.key === 'Escape') {
                 hideAddGroupModal();
+            }
+        });
+
+        // 右键菜单事件监听
+        copyUriItem.addEventListener('click', () => {
+            if (currentRightClickedId) {
+                vscode.postMessage({ 
+                    command: 'copyReferenceUri', 
+                    id: currentRightClickedId 
+                });
+                contextMenu.style.display = 'none';
             }
         });
 
@@ -806,7 +862,10 @@ export const TEMPLATE = `<!DOCTYPE html>
             // 右键菜单
             li.addEventListener('contextmenu', (e) => {
                 e.preventDefault();
-                showGroupModal(reference.id);
+                currentRightClickedId = reference.id;
+                contextMenu.style.display = 'block';
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
             });
 
             // 创建标题元素

@@ -195,6 +195,11 @@ class ReferenceDataManager {
 		}
 	}
 
+	// 获取引用项
+	getReferenceById(id: string): ReferenceItem | undefined {
+		return this.references.find(r => r.id === id);
+	}
+
 	// 获取存储路径
 	getStoragePath(): string {
 		return this.storagePath;
@@ -266,6 +271,9 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 					case 'updateReferenceGroup':
 						this._dataManager.updateReferenceGroup(message.id, message.groupId);
 						this._sendReferences();
+						return;
+					case 'copyReferenceUri':
+						this._copyReferenceUri(message.id);
 						return;
 				}
 			},
@@ -370,6 +378,40 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 		} catch (error) {
 			console.error('Failed to jump to reference:', error);
 			vscode.window.showErrorMessage('跳转到引用失败');
+		}
+	}
+
+	// 复制引用项的URI
+	private async _copyReferenceUri(id: string): Promise<void> {
+		const reference = this._dataManager.getReferenceById(id);
+		if (!reference) {
+			vscode.window.showErrorMessage('找不到对应的引用项');
+			return;
+		}
+
+		try {
+			// 构建URI
+			const scheme = vscode.env.uriScheme || 'vscode';
+			const baseUrl = `${scheme}://lirentech.file-ref-tags`;
+			const params = new URLSearchParams();
+
+			// 根据引用项类型添加参数
+			if (reference.filePath) {
+				params.append('filePath', reference.filePath);
+			}
+			if (reference.snippet) {
+				params.append('snippet', reference.snippet);
+			}
+
+			const queryString = params.toString();
+			const uri = queryString ? `${baseUrl}?${queryString}` : baseUrl;
+
+			// 复制到剪贴板
+			await vscode.env.clipboard.writeText(uri);
+			vscode.window.showInformationMessage('引用项URI已复制到剪贴板');
+		} catch (error) {
+			console.error('Failed to copy reference URI:', error);
+			vscode.window.showErrorMessage('复制引用项URI失败');
 		}
 	}
 
