@@ -204,6 +204,262 @@ class ReferenceDataManager {
 	getStoragePath(): string {
 		return this.storagePath;
 	}
+	
+	// 检查是否为二进制文件
+	private isBinaryFile(filePath: string): boolean {
+		const binaryExtensions = new Set([
+			// 图片文件
+			'.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.tiff', '.tif', 
+			'.raw', '.cr2', '.nef', '.orf', '.sr2', '.ico', '.psd', '.ai', '.eps',
+			
+			// 压缩文件
+			'.zip', '.rar', '.7z', '.tar', '.gz', '.bz2', '.xz', '.z', '.cab', 
+			'.arj', '.lzh', '.ace', '.jar', '.war', '.par', '.pkg', '.deb', '.rpm',
+			
+			// 可执行文件
+			'.exe', '.dll', '.so', '.dylib', '.app', '.bin', '.out', '.com', '.bat',
+			'.cmd', '.msi', '.sys', '.drv', '.obj', '.lib', '.o', '.a', '.elf',
+			
+			// 办公文档类型文件
+			'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.odt', 
+			'.ods', '.odp', '.rtf', '.pages', '.numbers', '.key', '.xcf',
+			
+			// 字体类型文件
+			'.ttf', '.otf', '.woff', '.woff2', '.eot', '.fon', '.pcf', '.pfb', '.pfm',
+			
+			// 色彩文件
+			'.icc', '.icm', '.gam', '.vf', '.cub',
+			
+			// 打印文件
+			'.prn', '.ps', '.pcl', '.plp', '.spl', '.eps', '.ai', '.pxl',
+			
+			// 其他二进制文件
+			'.pk', '.o', '.obj', '.lib', '.dll', '.so', '.dylib', '.class', '.jar', 
+			'.war', '.ear', '.swf', '.dat', '.bin', '.dat', '.db', '.sqlite', '.bak',
+			'.tmp', '.cache', '.pref', '.sav', '.pak', '.unity3d', '.nib', '.xib'
+		]);
+		
+		const ext = path.extname(filePath).toLowerCase();
+		return binaryExtensions.has(ext);
+	}
+	
+	// 获取文件大小
+	private getFileSize(filePath: string): number {
+		try {
+			const stats = fs.statSync(filePath);
+			return stats.size;
+		} catch (error) {
+			console.error(`无法获取文件大小: ${filePath}`, error);
+			return Number.MAX_SAFE_INTEGER; // 如果无法获取大小，则将其视为最大值，这样它会在排序时排到最后
+		}
+	}
+	
+	// 在指定文件列表中并行搜索代码片段
+	async parallelSearchInFiles(snippet: string, filePaths: vscode.Uri[]): Promise<{ matchCount: number; matchFile?: vscode.Uri; matchStartPosition?: vscode.Position; matchEndPosition?: vscode.Position }> {
+		if (!snippet) {
+			return { matchCount: 0 };
+		}
+		
+		const MAX_CONCURRENCY = 5; // 最大并发数
+		const results: { uri: vscode.Uri; start: vscode.Position; end: vscode.Position }[] = [];
+		
+		// 将文件路径分批处理
+		for (let i = 0; i < filePaths.length; i += MAX_CONCURRENCY) {
+			const batch = filePaths.slice(i, i + MAX_CONCURRENCY);
+			
+			// 并行处理当前批次的文件
+			const batchPromises = batch.map(async (file) => {
+				try {
+					const doc = await vscode.workspace.openTextDocument(file);
+					const text = doc.getText();
+					const index = text.indexOf(snippet);
+					
+					if (index !== -1) {
+						const startPosition = doc.positionAt(index);
+						const endPosition = doc.positionAt(index + snippet.length);
+						return { uri: file, start: startPosition, end: endPosition };
+					}
+				} catch (error) {
+					console.error(`无法打开文件: ${file.fsPath}`, error);
+				}
+				return null;
+			});
+			
+			const batchResults = await Promise.all(batchPromises);
+			
+			// 收集匹配结果
+			for (const result of batchResults) {
+				if (result) {
+					results.push(result);
+					// 如果找到超过1个匹配，提前返回
+					if (results.length > 1) {
+						return {
+							matchCount: results.length,
+							matchFile: results[0].uri,
+							matchStartPosition: results[0].start,
+							matchEndPosition: results[0].end
+						};
+					}
+				}
+			}
+			
+			// 如果已经找到多个匹配，提前返回
+			if (results.length > 1) {
+				break;
+			}
+		}
+		
+		if (results.length === 1) {
+			return {
+				matchCount: 1,
+				matchFile: results[0].uri,
+				matchStartPosition: results[0].start,
+				matchEndPosition: results[0].end
+			};
+		} else if (results.length > 1) {
+			return {
+				matchCount: results.length,
+				matchFile: results[0].uri,
+				matchStartPosition: results[0].start,
+				matchEndPosition: results[0].end
+			};
+		} else {
+			return { matchCount: 0 };
+		}
+	}
+	
+	// 层级搜索代码片段
+	async hierarchicalSearchSnippet(snippet: string, targetFilePath: string | undefined): Promise<{ matchCount: number; matchFile?: vscode.Uri; matchStartPosition?: vscode.Position; matchEndPosition?: vscode.Position }> {
+		if (!snippet) {
+			return { matchCount: 0 };
+		}
+		
+		// 首先尝试在目标文件路径中精确匹配
+		if (targetFilePath) {
+			try {
+				const targetUri = vscode.Uri.file(targetFilePath);
+				const doc = await vscode.workspace.openTextDocument(targetUri);
+				const text = doc.getText();
+				const index = text.indexOf(snippet);
+				
+				if (index !== -1) {
+					const startPosition = doc.positionAt(index);
+					const endPosition = doc.positionAt(index + snippet.length);
+					return {
+						matchCount: 1,
+						matchFile: targetUri,
+						matchStartPosition: startPosition,
+						matchEndPosition: endPosition
+					};
+				}
+			} catch (error) {
+				// 如果目标文件不存在或无法打开，继续尝试其他搜索方法
+				console.log(`目标文件不存在或无法打开: ${targetFilePath}`, error);
+			}
+			
+			// 在目标文件所在目录搜索同名文件
+			const targetDir = path.dirname(targetFilePath);
+			const targetFileName = path.basename(targetFilePath);
+			
+			try {
+				const dirFiles = await vscode.workspace.findFiles(`${targetDir.replace(/\\/g, '/')}/${targetFileName}`, '**/node_modules/**');
+				
+				for (const file of dirFiles) {
+					if (this.isBinaryFile(file.fsPath)) {
+						continue;
+					}
+					
+					try {
+						const doc = await vscode.workspace.openTextDocument(file);
+						const text = doc.getText();
+						const index = text.indexOf(snippet);
+						
+						if (index !== -1) {
+							const startPosition = doc.positionAt(index);
+							const endPosition = doc.positionAt(index + snippet.length);
+							return {
+								matchCount: 1,
+								matchFile: file,
+								matchStartPosition: startPosition,
+								matchEndPosition: endPosition
+							};
+						}
+					} catch (error) {
+						console.error(`无法打开文件: ${file.fsPath}`, error);
+						continue;
+					}
+				}
+			} catch (error) {
+				console.error(`在目标目录中搜索失败: ${targetDir}`, error);
+			}
+			
+			// 尝试层级搜索：从目标文件所在目录开始，逐层向上搜索
+			const rootPath = path.parse(targetDir).root; // 获取盘符或根目录
+			let currentDir = targetDir;
+			
+			// 已搜索过的目录集合，防止重复搜索
+			const searchedDirs = new Set<string>();
+			
+			while (currentDir !== rootPath && currentDir !== '.') {
+				// 如果当前目录已搜索过，则跳过
+				if (searchedDirs.has(currentDir.toLowerCase())) {
+					const parentDir = path.dirname(currentDir);
+					if (parentDir === currentDir) {
+						break;
+					}
+					currentDir = parentDir;
+					continue;
+				}
+				
+				try {
+					// 记录当前目录为已搜索
+					searchedDirs.add(currentDir.toLowerCase());
+					
+					// 搜索当前目录下的所有文件（递归搜索）
+					const currentDirFiles = await vscode.workspace.findFiles(`${currentDir.replace(/\\/g, '/')}/**/*`, '**/node_modules/**`);
+					
+					// 按文件大小排序，从小到大
+					const sortedFiles = currentDirFiles.sort((a, b) => {
+						const sizeA = this.getFileSize(a.fsPath);
+						const sizeB = this.getFileSize(b.fsPath);
+						return sizeA - sizeB;
+					});
+					
+					// 过滤二进制文件并进行并行搜索
+					const textFiles = sortedFiles.filter(file => !this.isBinaryFile(file.fsPath));
+					const result = await this.parallelSearchInFiles(snippet, textFiles);
+					
+					if (result.matchCount > 0) {
+						return result; // 找到匹配项，立即返回
+					}
+				} catch (error) {
+					console.error(`在目录中搜索失败: ${currentDir}`, error);
+				}
+				
+				// 移动到上一级目录
+				const parentDir = path.dirname(currentDir);
+				if (parentDir === currentDir) {
+					// 已经到达根目录
+					break;
+				}
+				currentDir = parentDir;
+			}
+		}
+		
+		// 如果层级搜索未找到，则进行全局搜索
+		const allFiles = await vscode.workspace.findFiles('**/*', '**/node_modules/**', 10000);
+		
+		// 按文件大小排序，从小到大
+		const sortedAllFiles = allFiles.sort((a, b) => {
+			const sizeA = this.getFileSize(a.fsPath);
+			const sizeB = this.getFileSize(b.fsPath);
+			return sizeA - sizeB;
+		});
+		
+		// 过滤二进制文件并进行并行搜索
+		const textFiles = sortedAllFiles.filter(file => !this.isBinaryFile(file.fsPath));
+		return await this.parallelSearchInFiles(snippet, textFiles);
+	}
 }
 
 // Webview视图提供器
@@ -562,52 +818,30 @@ class FileRefTagsViewProvider implements vscode.WebviewViewProvider {
 		
 		const snippet = reference.snippet;
 		
-		// 先获取当前工作区的所有文件
-		const files = await vscode.workspace.findFiles('**/*', '**/node_modules/**', 10000);
-		console.log('全局搜索文件数量:', files.length);
-
-		let matchCount = 0;
-		let matchFile: vscode.Uri | undefined;
-		let matchStartPosition: vscode.Position | undefined;
-		let matchEndPosition: vscode.Position | undefined;
-
-		// 遍历文件，查找包含代码片段的文件
-		for (const file of files) {
-			try {
-				const doc = await vscode.workspace.openTextDocument(file);
-				const text = doc.getText();
-				const index = text.indexOf(snippet);
-				if (index !== -1) {
-					matchCount++;
-					matchFile = file;
-					matchStartPosition = doc.positionAt(index);
-					matchEndPosition = doc.positionAt(index + snippet.length);
-					// 如果超过1个匹配，就可以提前结束
-					if (matchCount > 1) {
-						break;
-					}
-				}
-			} catch (error) {
-				// 忽略无法打开的文件
-				console.error('无法打开文件:', file.fsPath, error);
-				continue;
-			}
+		// 使用新的层级搜索方法
+		let result;
+		if (reference.targetFilePath) {
+			result = await this._dataManager.hierarchicalSearchSnippet(snippet, reference.targetFilePath);
+		} else {
+			// 如果没有目标文件路径，仍然进行全局搜索
+			const files = await vscode.workspace.findFiles('**/*', '**/node_modules/**', 10000);
+			result = await this._dataManager.parallelSearchInFiles(snippet, files);
 		}
 
-		console.log('匹配数量:', matchCount);
+		console.log('匹配数量:', result.matchCount);
 
-		if (matchCount === 1 && matchFile && matchStartPosition && matchEndPosition) {
-			const textEditor = await vscode.window.showTextDocument(matchFile);
-			const range = new vscode.Range(matchStartPosition, matchEndPosition);
-			await vscode.window.showTextDocument(matchFile, { selection: range });
+		if (result.matchCount === 1 && result.matchFile && result.matchStartPosition && result.matchEndPosition) {
+			const textEditor = await vscode.window.showTextDocument(result.matchFile);
+			const range = new vscode.Range(result.matchStartPosition, result.matchEndPosition);
+			await vscode.window.showTextDocument(result.matchFile, { selection: range });
 			// 确保选中的内容可见
 			await textEditor.revealRange(range, vscode.TextEditorRevealType.InCenter);
 			
 			// 更新记录的文件路径
-			if (reference.targetFilePath !== matchFile.fsPath) {
-				this._dataManager.updateReferenceTargetFilePath(reference.id, matchFile.fsPath);
+			if (reference.targetFilePath !== result.matchFile.fsPath) {
+				this._dataManager.updateReferenceTargetFilePath(reference.id, result.matchFile.fsPath);
 			}
-		} else if (matchCount === 0) {
+		} else if (result.matchCount === 0) {
 			vscode.window.showWarningMessage('未找到匹配的代码片段');
 		} else {
 			vscode.window.showWarningMessage('代码片段已不是全局唯一');
@@ -803,43 +1037,18 @@ export function activate(context: vscode.ExtensionContext) {
 			const files = await vscode.workspace.findFiles('**/*', '**/node_modules/**', 10000);
 			console.log('搜索文件数量:', files.length);
 
-			let matchCount = 0;
-			let matchFile: vscode.Uri | undefined;
-			let matchStartPosition: vscode.Position | undefined;
-			let matchEndPosition: vscode.Position | undefined;
+			// 使用数据管理器的并行搜索方法
+			const result = await dataManager.parallelSearchInFiles(snippet, files);
 
-			// 遍历文件，查找包含代码片段的文件
-			for (const file of files) {
-				try {
-					const doc = await vscode.workspace.openTextDocument(file);
-					const text = doc.getText();
-					const index = text.indexOf(snippet);
-					if (index !== -1) {
-						matchCount++;
-						matchFile = file;
-						matchStartPosition = doc.positionAt(index);
-						matchEndPosition = doc.positionAt(index + snippet.length);
-						// 如果超过1个匹配，就可以提前结束
-						if (matchCount > 1) {
-							break;
-						}
-					}
-				} catch (error) {
-					// 忽略无法打开的文件
-					console.error('无法打开文件:', file.fsPath, error);
-					continue;
-				}
-			}
+			console.log('匹配数量:', result.matchCount);
 
-			console.log('匹配数量:', matchCount);
-
-			if (matchCount === 1 && matchFile && matchStartPosition && matchEndPosition) {
-				const textEditor = await vscode.window.showTextDocument(matchFile);
-				const range = new vscode.Range(matchStartPosition, matchEndPosition);
-				await vscode.window.showTextDocument(matchFile, { selection: range });
+			if (result.matchCount === 1 && result.matchFile && result.matchStartPosition && result.matchEndPosition) {
+				const textEditor = await vscode.window.showTextDocument(result.matchFile);
+				const range = new vscode.Range(result.matchStartPosition, result.matchEndPosition);
+				await vscode.window.showTextDocument(result.matchFile, { selection: range });
 				// 确保选中的内容可见
 				await textEditor.revealRange(range, vscode.TextEditorRevealType.InCenter);
-			} else if (matchCount === 0) {
+			} else if (result.matchCount === 0) {
 				vscode.window.showWarningMessage('未找到匹配的代码片段');
 			} else {
 				vscode.window.showWarningMessage('代码片段已不是全局唯一');
